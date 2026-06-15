@@ -1,0 +1,142 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Pre-provisioned and logged-in clinical staff profiles.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique user ID synced with Firebase Auth."
+        },
+        "name": {
+          "type": "string",
+          "description": "Clinical staff name."
+        },
+        "email": {
+          "type": "string",
+          "description": "Google SSO email."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "doctor", "receptionist"],
+          "description": "System role controlling access privileges."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Database insertion timestamp."
+        }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "Patient": {
+      "title": "Patient",
+      "description": "Ocular clinic patient master registry.",
+      "type": "object",
+      "properties": {
+        "patientId": {
+          "type": "string",
+          "description": "Sequential unique ID of format HB###."
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of patient."
+        },
+        "mobile": {
+          "type": "string",
+          "description": "Primary mobile number."
+        },
+        "age": {
+          "type": "number",
+          "description": "Age in years."
+        },
+        "gender": {
+          "type": "string",
+          "description": "Gender classification."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of initial registration."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["patientId", "name", "mobile", "age", "gender", "date"]
+    },
+    "Prescription": {
+      "title": "Prescription",
+      "description": "Ophthalmic spectacle refraction diagnostics file.",
+      "type": "object",
+      "properties": {
+        "prescriptionId": {
+          "type": "string",
+          "description": "Sequential Rx number of format HBE-2026-####."
+        },
+        "patientId": {
+          "type": "string",
+          "description": "Referenced patient HB### number."
+        },
+        "patientName": {
+          "type": "string",
+          "description": "Name copy of the patient."
+        },
+        "mobile": {
+          "type": "string",
+          "description": "Mobile reference."
+        },
+        "age": {
+          "type": "number",
+          "description": "Patient age."
+        },
+        "gender": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "rightEyeData": {
+          "type": "object",
+          "description": "Refraction power data including distance, near SPH, CYL, AXIS, VISION, and ADD."
+        },
+        "leftEyeData": {
+          "type": "object",
+          "description": "Refraction power data including distance, near SPH, CYL, AXIS, VISION, and ADD."
+        },
+        "pd": {
+          "type": "string",
+          "description": "Pupillary Distance parameter in millimeters."
+        },
+        "advice": {
+          "type": "array",
+          "description": "Checklist elements for optical lens advice."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Doctor's clinical reports/remarks."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["prescriptionId", "patientId", "patientName", "rightEyeData", "leftEyeData", "pd", "advice", "notes"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Stores user roles. Access restricted based on authentication status & role."
+    },
+    "patients/{patientId}": {
+      "schema": "Patient",
+      "description": "Primary clinical registries. Access restricted to administrator or clerks."
+    },
+    "prescriptions/{prescriptionId}": {
+      "schema": "Prescription",
+      "description": "Refraction eye papers. Generated and edited by administrators or doctors only."
+    }
+  }
+}

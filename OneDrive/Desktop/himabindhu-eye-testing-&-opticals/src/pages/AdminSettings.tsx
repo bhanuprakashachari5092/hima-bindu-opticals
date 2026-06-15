@@ -1,0 +1,635 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth, UserRole } from '../context/AuthContext';
+import { doc, setDoc, getDocs, collection, deleteDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../config/firebase';
+import { 
+  Settings, 
+  UserCheck, 
+  Mail, 
+  User, 
+  Trash2, 
+  ShieldAlert, 
+  Users, 
+  Loader2, 
+  Shield, 
+  PlusCircle,
+  Clock,
+  ClipboardList,
+  Calendar,
+  Phone,
+  Search,
+  CheckCircle2,
+  Trash,
+  MapPin,
+  Smartphone,
+  Activity
+} from 'lucide-react';
+
+interface StaffUser {
+  uid?: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  password?: string;
+  createdAt: any;
+}
+
+interface Patient {
+  patientId: string;
+  name: string;
+  mobile: string;
+  age: number;
+  gender: string;
+  date: string;
+  createdAt?: any;
+}
+
+export default function AdminSettings() {
+  const { isDemoMode, userProfile } = useAuth();
+  
+  // Form State
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<UserRole>('receptionist');
+  
+  // App States
+  const [staffList, setStaffList] = useState<StaffUser[]>([]);
+  const [patientsList, setPatientsList] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingPatients, setLoadingPatients] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [patientSearch, setPatientSearch] = useState('');
+  const [loginLogs, setLoginLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(true);
+
+  // Fetch all user session audit logs
+  const loadLoginLogs = async () => {
+    setLoadingLogs(true);
+    if (isDemoMode) {
+      const stored = localStorage.getItem('hb_demo_login_logs') || '[]';
+      setLoginLogs(JSON.parse(stored));
+      setLoadingLogs(false);
+      return;
+    }
+    try {
+      const q = query(collection(db, 'login_logs'), orderBy('loginTime', 'desc'), limit(50));
+      const querySnap = await getDocs(q);
+      if (querySnap) {
+        const list = querySnap.docs.map(doc => doc.data());
+        setLoginLogs(list);
+      }
+    } catch (err) {
+      console.error("Failed loading session logs:", err);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
+  // Fetch all provisioned staff accounts
+  const loadStaffRegistry = async () => {
+    setLoading(true);
+    setSuccessMsg(null);
+
+    if (isDemoMode) {
+      const stored = localStorage.getItem('hb_demo_users');
+      if (stored) {
+        setStaffList(JSON.parse(stored));
+      } else {
+        // Bootstrap standard dummy staff for visuals
+        const initialStaff: StaffUser[] = [
+          { uid: 'demo-uid-admin', name: 'Himabindhu', email: 'kh2kgaming@gmail.com', role: 'admin', createdAt: new Date().toISOString() },
+          { uid: 'demo-uid-doctor', name: 'S. K. Prasad', email: 'prasad@himabindhueye.com', role: 'doctor', createdAt: new Date().toISOString() },
+          { uid: 'demo-uid-receptionist', name: 'Venkata Laxmi', email: 'laxmi@himabindhueye.com', role: 'receptionist', createdAt: new Date().toISOString() }
+        ];
+        localStorage.setItem('hb_demo_users', JSON.stringify(initialStaff));
+        setStaffList(initialStaff);
+      }
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const querySnap = await getDocs(collection(db, 'users')).catch(err => 
+        handleFirestoreError(err, OperationType.LIST, 'users')
+      );
+      if (querySnap) {
+        const list = querySnap.docs.map(doc => doc.data() as StaffUser);
+        setStaffList(list);
+      }
+    } catch (e) {
+      console.error("Failed loading staff registry database", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch registered patients ("receptionlist") to monitor receptionist activities
+  const loadReceptionList = async () => {
+    setLoadingPatients(true);
+    try {
+      if (isDemoMode) {
+        const stored = localStorage.getItem('hb_demo_patients') || '[]';
+        setPatientsList(JSON.parse(stored));
+      } else {
+        const querySnap = await getDocs(collection(db, 'patients')).catch(err => 
+          handleFirestoreError(err, OperationType.LIST, 'patients')
+        );
+        if (querySnap) {
+          const list = querySnap.docs.map(doc => doc.data() as Patient);
+          // Sort descending
+          setPatientsList(list.sort((a,b) => b.patientId.localeCompare(a.patientId)));
+        }
+      }
+    } catch (err) {
+      console.error("Failed loading receptionist patient logs:", err);
+    } finally {
+      setLoadingPatients(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStaffRegistry();
+    loadReceptionList();
+    loadLoginLogs();
+  }, [isDemoMode]);
+
+  const handleProvisionStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim()) {
+      alert("Name and email are mandatory.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSuccessMsg(null);
+
+    const checkEmail = email.trim().toLowerCase();
+    
+    // Check if email is already listed
+    if (staffList.find(s => s.email.toLowerCase() === checkEmail)) {
+      alert("This staff email is already provisioned in the database.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const newStaff: StaffUser = {
+      name: name.trim(),
+      email: checkEmail,
+      role: role,
+      password: password.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    if (isDemoMode) {
+      const storedList = [...staffList, newStaff];
+      localStorage.setItem('hb_demo_users', JSON.stringify(storedList));
+      setSuccessMsg(`Clinical authorization granted for ${newStaff.name} as ${newStaff.role}.`);
+      setName('');
+      setEmail('');
+      setPassword('');
+      await loadStaffRegistry();
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const tempId = `temp_${checkEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const userDocRef = doc(db, 'users', tempId);
+      
+      await setDoc(userDocRef, {
+        ...newStaff,
+        uid: tempId,
+        createdAt: serverTimestamp()
+      }).catch(err => {
+        handleFirestoreError(err, OperationType.CREATE, `users/${tempId}`);
+      });
+
+      setSuccessMsg(`Clinical authorization pre-provisioned for ${newStaff.name} (${newStaff.role}).`);
+      setName('');
+      setEmail('');
+      setPassword('');
+      await loadStaffRegistry();
+    } catch (err) {
+      console.error(err);
+      alert("Account pre-provisioning failed. Review security rules.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Revoke/Delete Staff accounts
+  const handleRevokeStaff = async (staff: StaffUser) => {
+    if (staff.email === userProfile?.email) {
+      alert("Safety Block: You cannot revoke authorization from your own active session account.");
+      return;
+    }
+
+    const confirmRevoke = window.confirm(`Are you certain you wish to revoke all access permissions for ${staff.name} (${staff.email})? They will be locked out immediately.`);
+    if (!confirmRevoke) return;
+
+    if (isDemoMode) {
+      const updated = staffList.filter(s => s.email !== staff.email);
+      localStorage.setItem('hb_demo_users', JSON.stringify(updated));
+      await loadStaffRegistry();
+      return;
+    }
+
+    try {
+      const targetId = staff.uid || `temp_${staff.email.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')}`;
+      await deleteDoc(doc(db, 'users', targetId)).catch(err => {
+        handleFirestoreError(err, OperationType.DELETE, `users/${targetId}`);
+      });
+      
+      alert(`Access revoked for ${staff.name}.`);
+      await loadStaffRegistry();
+    } catch (err) {
+      console.error(err);
+      alert("Revocation failed. Access controlled via security rules.");
+    }
+  };
+
+  // Admin bypass to delete fake or erroneous patient registries from receptionist list
+  const handleDeletePatientIntake = async (patient: Patient) => {
+    const confirmDelete = window.confirm(`Administrative Override: Are you sure you wish to delete the patient file for ${patient.name} (${patient.patientId})? This action cannot be undone.`);
+    if (!confirmDelete) return;
+
+    if (isDemoMode) {
+      const stored = localStorage.getItem('hb_demo_patients') || '[]';
+      const parsed = JSON.parse(stored) as Patient[];
+      const updated = parsed.filter(p => p.patientId !== patient.patientId);
+      localStorage.setItem('hb_demo_patients', JSON.stringify(updated));
+      await loadReceptionList();
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'patients', patient.patientId)).catch(err => {
+        handleFirestoreError(err, OperationType.DELETE, `patients/${patient.patientId}`);
+      });
+      await loadReceptionList();
+      alert(`Patient entry ${patient.patientId} has been administrative deleted.`);
+    } catch (err) {
+      console.error("Override deletion failed", err);
+      alert("Failed to override patient entry.");
+    }
+  };
+
+  // Filter patients list based on admin query
+  const filteredPatients = patientsList.filter(p => 
+    p.name.toLowerCase().includes(patientSearch.toLowerCase()) ||
+    p.patientId.toLowerCase().includes(patientSearch.toLowerCase()) ||
+    p.mobile.includes(patientSearch)
+  );
+
+  return (
+    <div className="space-y-8 font-sans">
+      
+      {/* Clinicians & RBAC controls */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Account Provisioning form */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <Settings className="w-5 h-5 text-blue-400" />
+              <h3 className="font-extrabold text-white text-sm uppercase tracking-wider">Clinical Auth Manager (RBAC)</h3>
+            </div>
+            <span className="text-[9px] uppercase font-mono bg-slate-950 px-2 py-0.5 rounded text-slate-400">
+              Root Secure Desk
+            </span>
+          </div>
+
+          {successMsg && (
+            <div className="mx-6 mt-6 p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-xl flex items-start gap-2.5">
+              <UserCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-emerald-800">
+                <p className="font-bold">{successMsg}</p>
+                <p className="mt-0.5 font-medium text-slate-500">The authorized staff member may now sign on inside the secure gate.</p>
+              </div>
+            </div>
+          )}
+
+          <div className="mx-6 mt-6 p-4 bg-amber-50/20 border border-amber-200 rounded-xl text-xs text-blue-950 flex gap-2.5">
+            <ShieldAlert className="w-5 h-5 shrink-0 text-blue-500" />
+            <div>
+              <p className="font-bold">Anti-Intrusion Rule Active</p>
+              <p className="mt-1 text-slate-500 leading-normal font-semibold">
+                Self-registration is deactivated. Receptionists, welcome clerks, and optometrists must be pre-authorized under this secure panel first.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleProvisionStaff} className="p-6 space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Staff Full Name
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                    <User className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="e.g., S. K. Prasad"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    className="w-full border border-slate-205 bg-slate-50/50 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Staff Gmail / Google Account
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                    <Mail className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="email"
+                    placeholder="e.g., prasad@google_account.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full border border-slate-205 bg-slate-50/50 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Staff Login Password
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                    <PlusCircle className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="password"
+                    placeholder="Enter login password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full border border-slate-205 bg-slate-50/50 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition"
+                  />
+                </div>
+              </div>
+
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 flex justify-end">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-5 py-2.5 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700 hover:shadow-lg hover:shadow-amber-500/10 transition cursor-pointer flex items-center gap-1.5"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Authorizing...</span>
+                  </>
+                ) : (
+                  <>
+                    <PlusCircle className="w-4 h-4" />
+                    <span>Provision Credentials</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Staff roster directory */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 self-start">
+          <div className="flex items-center gap-2 mb-4 border-b pb-3 border-slate-100">
+            <Users className="w-5 h-5 text-amber-600" />
+            <h4 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Authorized Clinicians</h4>
+          </div>
+
+          {loading ? (
+            <div className="py-8 text-center text-slate-400 flex flex-col items-center justify-center text-xs">
+              <Loader2 className="w-6 h-6 animate-spin text-amber-600 mb-2" />
+              <p>Fetching clinician registry...</p>
+            </div>
+          ) : staffList.length === 0 ? (
+            <p className="text-xs text-slate-400 text-center py-6">
+              Roster empty. Provision new accounts on the left.
+            </p>
+          ) : (
+            <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+              {staffList.map((staff) => (
+                <div 
+                  key={staff.email} 
+                  className="p-3 bg-slate-50 border border-slate-150 rounded-xl relative group flex justify-between items-center transition hover:bg-slate-100/50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      {staff.role === 'admin' ? (
+                        <Shield className="w-3.5 h-3.5 text-amber-600" />
+                      ) : (
+                        <User className="w-3.5 h-3.5 text-slate-600" />
+                      )}
+                      <h5 className="font-bold text-slate-800 text-xs truncate">{staff.name}</h5>
+                    </div>
+                    <p className="text-[9px] text-slate-450 mt-1 font-mono break-all font-semibold select-all">{staff.email}</p>
+                    <span className="inline-block mt-2 text-[8px] uppercase font-black tracking-widest text-amber-600 bg-amber-50/25 border border-amber-200 px-1.5 py-0.5 rounded">
+                      {staff.role}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col items-end shrink-0 pl-2">
+                    <button
+                      onClick={() => handleRevokeStaff(staff)}
+                      className="p-1.5 text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition opacity-60 hover:opacity-100 cursor-pointer"
+                      title="De-authorize clinician immediately"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* RECEPTION LIST SECTION ADDED DIRECTLY TO ADMIN PAGE AS REQUESTED */}
+      {/* "receptionlist nee admin page lo add chei mawa" */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="admin-reception-list">
+        <div className="p-5 bg-slate-900 border-b border-slate-800 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-amber-600 rounded-lg text-white">
+              <ClipboardList className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-sm uppercase tracking-wider text-white">Welcome Desk Registry (Reception List)</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Administrative monitoring of all patients registered at the welcome desk by receptionists.</p>
+            </div>
+          </div>
+          
+          {/* Active Search Filter inside Admin reception list */}
+          <div className="relative shrink-0 max-w-xs w-full">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+              <Search className="w-4 h-4" />
+            </span>
+            <input
+              type="text"
+              placeholder="Search Reception List"
+              value={patientSearch}
+              onChange={(e) => setPatientSearch(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-700 focus:bg-white text-slate-300 focus:text-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs font-bold focus:outline-hidden transition"
+            />
+          </div>
+        </div>
+
+        {loadingPatients ? (
+          <div className="p-16 text-center text-slate-400 font-bold flex flex-col items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-amber-600 mb-3" />
+            <p className="text-xs uppercase tracking-wider">Syncing reception records...</p>
+          </div>
+        ) : filteredPatients.length === 0 ? (
+          <div className="p-16 text-center text-slate-450 font-bold">
+            <p className="text-xs uppercase tracking-wider">The Reception logs directory is empty</p>
+            <p className="text-[11px] text-slate-400 mt-1 italic font-normal">No registered patients are matching current administrative parameters.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="bg-slate-50/70 border-b border-slate-150 text-[10px] text-slate-450 font-bold uppercase tracking-widest">
+                  <th className="py-3.5 px-6">Patient ID</th>
+                  <th className="py-3.5 px-6">Patient Name</th>
+                  <th className="py-3.5 px-6">Contact / Mobile</th>
+                  <th className="py-3.5 px-6">Age / Gender</th>
+                  <th className="py-3.5 px-6">Registration Date</th>
+                  <th className="py-3.5 px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-150 text-slate-700 font-semibold font-sans">
+                {filteredPatients.map((patient) => (
+                  <tr key={patient.patientId} className="hover:bg-slate-50/50 transition">
+                    <td className="py-4 px-6">
+                      <span className="font-mono font-bold text-xs text-amber-600 bg-amber-50/25/60 border border-amber-200 px-2.5 py-1 rounded">
+                        {patient.patientId}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 text-slate-900 font-bold">{patient.name}</td>
+                    <td className="py-4 px-6 font-mono text-slate-500">{patient.mobile}</td>
+                    <td className="py-4 px-6 text-slate-550">{patient.age} Yrs / {patient.gender}</td>
+                    <td className="py-4 px-6 text-slate-500">{patient.date}</td>
+                    <td className="py-4 px-6 text-right">
+                      <button
+                        onClick={() => handleDeletePatientIntake(patient)}
+                        className="p-1.5 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition inline-flex items-center gap-1 cursor-pointer"
+                        title="Administrative force delete patient"
+                      >
+                        <Trash className="w-4 h-4" />
+                        <span className="text-[10px] font-bold">Delete</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* STAFF SESSION AUDIT LOGS SECTION */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="admin-login-audit-logs">
+        <div className="p-5 bg-slate-900 border-b border-slate-800 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-teal-600 rounded-lg text-white">
+              <Activity className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-sm uppercase tracking-wider text-white">Staff Session Audit Logs</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Real-time session monitoring tracking exactly when and where staff members sign on to the clinic console.</p>
+            </div>
+          </div>
+          <button 
+            onClick={loadLoginLogs}
+            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-teal-400 font-bold border border-slate-700/60 rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+          >
+            <Clock className="w-3.5 h-3.5 text-teal-400" />
+            <span>Refresh Logs</span>
+          </button>
+        </div>
+
+        {loadingLogs ? (
+          <div className="p-16 text-center text-slate-400 font-bold flex flex-col items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-teal-600 mb-3" />
+            <p className="text-xs uppercase tracking-wider">Loading receptionist login audit trail...</p>
+          </div>
+        ) : loginLogs.filter(log => log.role === 'receptionist').length === 0 ? (
+          <div className="p-16 text-center text-slate-450 font-bold">
+            <p className="text-xs uppercase tracking-wider">No receptionist login sessions recorded</p>
+            <p className="text-[11px] text-slate-400 mt-1 italic font-normal">Session logs will begin populating automatically as receptionists authenticate.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="bg-slate-50/70 border-b border-slate-150 text-[10px] text-slate-450 font-bold uppercase tracking-widest">
+                  <th className="py-3.5 px-6">Login Time</th>
+                  <th className="py-3.5 px-6">Staff Name</th>
+                  <th className="py-3.5 px-6">Role</th>
+                  <th className="py-3.5 px-6">IP Address</th>
+                  <th className="py-3.5 px-6">Location</th>
+                  <th className="py-3.5 px-6">Device Console</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-150 text-slate-700 font-semibold font-sans">
+                {loginLogs
+                  .filter(log => log.role === 'receptionist')
+                  .map((log, index) => (
+                    <tr key={log.loginTime + '_' + index} className="hover:bg-slate-50/50 transition">
+                      <td className="py-4 px-6 text-slate-500 font-mono text-[11px]">
+                        {new Date(log.loginTime).toLocaleString('en-IN', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: true
+                        })}
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="text-slate-900 font-bold">{log.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono font-medium">{log.email}</div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="inline-block text-[8.5px] uppercase font-black tracking-wider border px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-600 border-teal-500/20">
+                          {log.role}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 font-mono text-slate-550 text-xs">{log.ip}</td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-1.5 text-slate-700">
+                          <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                          <span className="font-semibold">{log.location}</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-1.5 text-slate-500 font-mono text-[10px]">
+                          <Smartphone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>{log.device}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
+}

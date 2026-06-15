@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Fetches the user data record
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+
+    // Checking clinical roles
+    function isUserAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email.toLowerCase() == "kh2kgaming@gmail.com" ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).role == "admin")
+      );
+    }
+
+    function isUserDoctor() {
+      return isSignedIn() && (
+        isUserAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).role == "doctor")
+      );
+    }
+
+    function isUserReceptionist() {
+      return isSignedIn() && (
+        isUserAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).role == "receptionist")
+      );
+    }
+
+    // 1. Catch-all safety nets: Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users Collection rules
+    match /users/{userId} {
+      // Allows logged in clinical staff lookup
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      
+      // Let root bootstrapped admin, pre-existing admin, or a pre-provisioned user document claim its profile
+      allow create: if isSignedIn() && (
+        isUserAdmin() ||
+        userId == request.auth.uid ||
+        request.auth.token.email.toLowerCase() == "kh2kgaming@gmail.com"
+      );
+
+      // Only true active administrators can modify role assignments to prevent self-authorization
+      allow update: if isSignedIn() && isUserAdmin() && (
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
+        isUserAdmin()
+      );
+      
+      allow delete: if isSignedIn() && isUserAdmin();
+    }
+
+    // Patients Collection rules
+    match /patients/{patientId} {
+      allow read: if isSignedIn();
+      
+      // Only Admin and Receptionists can registers new entries
+      allow create, update: if isSignedIn() && (isUserAdmin() || isUserReceptionist());
+      allow delete: if isSignedIn() && isUserAdmin();
+    }
+
+    // Prescriptions Collection rules
+    match /prescriptions/{prescriptionId} {
+      allow read: if isSignedIn();
+      
+      // Only Admin and Doctors can enter/edit original eye power parameters
+      allow create, update: if isSignedIn() && (isUserAdmin() || isUserDoctor());
+      allow delete: if isSignedIn() && isUserAdmin();
+    }
+  }
+}

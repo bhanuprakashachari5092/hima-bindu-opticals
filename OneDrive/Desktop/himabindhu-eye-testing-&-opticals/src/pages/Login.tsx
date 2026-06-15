@@ -1,0 +1,269 @@
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { 
+  Lock, 
+  ShieldAlert, 
+  Loader2, 
+  KeyRound, 
+  MapPin,
+  Mail,
+  LockKeyhole,
+  CheckCircle2
+} from 'lucide-react';
+
+export default function Login() {
+  const { setDemoProfile, loading, isDemoMode } = useAuth();
+  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [loginTab, setLoginTab] = useState<'admin' | 'receptionist'>('receptionist');
+  const [successLogin, setSuccessLogin] = useState(false);
+  const [loggedUserName, setLoggedUserName] = useState('');
+  const [loggedUserRole, setLoggedUserRole] = useState('');
+
+  const handleCredentialsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLocalError(null);
+    setSubmitting(true);
+
+    const emailClean = email.trim().toLowerCase();
+    const passClean = password.trim();
+
+    if (loginTab === 'admin') {
+      // Admin static login
+      if (emailClean === 'admin@gmail.com' && passClean === 'admin') {
+        const name = 'Himabindhu (Admin)';
+        const role = 'admin';
+        setLoggedUserName(name);
+        setLoggedUserRole(role);
+        setSuccessLogin(true);
+        setSubmitting(false);
+        setTimeout(() => {
+          setDemoProfile(role, name);
+        }, 1600);
+      } else {
+        setLocalError('Invalid Admin credentials.');
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // Receptionist Login
+    let matchedUser = null;
+
+    // 1. Try finding in localStorage first
+    const stored = localStorage.getItem('hb_demo_users');
+    if (stored) {
+      try {
+        const list = JSON.parse(stored);
+        matchedUser = list.find((u: any) => 
+          u.email.toLowerCase() === emailClean && 
+          u.password === passClean && 
+          u.role === 'receptionist'
+        );
+      } catch (e) {
+        console.error("Failed to parse local user registry:", e);
+      }
+    }
+
+    // 2. Try finding in Firestore if not found in localStorage
+    if (!matchedUser) {
+      try {
+        const usersRef = collection(db, 'users');
+        const qSnap = await getDocs(usersRef);
+        const list = qSnap.docs.map(doc => doc.data());
+        matchedUser = list.find((u: any) => 
+          u.email.toLowerCase() === emailClean && 
+          u.password === passClean && 
+          u.role === 'receptionist'
+        );
+      } catch (err) {
+        console.warn("Firestore user query failed, checking fallbacks...", err);
+      }
+    }
+
+    // 3. Fallback to hardcoded default demo receptionist if registry is empty
+    if (!matchedUser) {
+      if (emailClean === 'receptionist@gmail.com' && passClean === 'receptionist') {
+        matchedUser = { name: 'Venkata Laxmi (Receptionist)' };
+      }
+    }
+
+    if (matchedUser) {
+      const name = matchedUser.name;
+      const role = 'receptionist';
+      setLoggedUserName(name);
+      setLoggedUserRole(role);
+      setSuccessLogin(true);
+      setSubmitting(false);
+      setTimeout(() => {
+        setDemoProfile(role, name);
+      }, 1600);
+    } else {
+      setLocalError('Invalid Receptionist credentials or password.');
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans selection:bg-amber-50/20 selection:text-white relative">
+      {/* Success Loading Animation Overlay */}
+      {successLogin && (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center text-white transition-opacity duration-300">
+          <div className="relative flex flex-col items-center justify-center p-8 bg-slate-900/60 rounded-3xl border border-slate-800 shadow-2xl max-w-sm w-full text-center">
+            <div className="relative mb-6">
+              <div className="absolute -inset-4 bg-emerald-500/20 rounded-full blur-xl animate-pulse"></div>
+              <div className="w-20 h-20 rounded-full border-4 border-emerald-500/30 flex items-center justify-center relative">
+                <div className="absolute inset-0 border-4 border-t-emerald-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+                <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+              </div>
+            </div>
+            
+            <h3 className="text-xl font-black uppercase tracking-wider text-emerald-400">Login Authorized</h3>
+            <p className="text-xs text-slate-400 font-mono mt-1">Configuring secure clinical terminal...</p>
+            
+            <div className="h-px bg-slate-800 w-full my-4"></div>
+            
+            <p className="text-sm font-bold text-slate-100">Welcome back,</p>
+            <p className="text-md font-extrabold text-amber-400 mt-0.5">{loggedUserName}</p>
+            <span className="inline-block mt-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+              {loggedUserRole}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="mx-auto h-16 w-16 rounded-2xl bg-slate-900 shadow-md shadow-slate-900/20 flex items-center justify-center text-white p-2.5">
+          <svg viewBox="0 0 100 100" className="w-full h-full">
+            <path d="M15,50 C30,22 70,22 85,50 C70,78 30,78 15,50 Z" fill="none" stroke="#ffffff" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="50" cy="50" r="16" fill="none" stroke="#ffffff" strokeWidth="7" />
+            <circle cx="50" cy="50" r="8" fill="#ffffff" />
+            <g fill="#ffffff">
+              <rect x="15" y="65" width="16" height="5" rx="1.5" />
+              <rect x="20.5" y="59.5" width="5" height="16" rx="1.5" />
+            </g>
+          </svg>
+        </div>
+        <h2 className="mt-6 text-center text-3xl font-black text-slate-900 font-serif tracking-tight">
+          HIMABINDHU
+        </h2>
+        <p className="mt-1 text-center text-xs font-bold text-amber-600 tracking-widest uppercase">
+          Eye Testing & Opticals
+        </p>
+      </div>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-6 sm:px-10 shadow-xl border border-slate-200 rounded-3xl space-y-6">
+          <div>
+            <h3 className="text-base font-black text-slate-800 text-center uppercase tracking-wider">Clinical Auth Console</h3>
+            <p className="text-[10px] text-slate-450 mt-1 leading-normal tracking-wide text-center uppercase font-bold">
+              Sign in with your authorized credentials
+            </p>
+          </div>
+
+          <div className="flex bg-slate-100 p-1.5 rounded-2xl">
+            <button
+              type="button"
+              onClick={() => {
+                setLoginTab('receptionist');
+                setLocalError(null);
+              }}
+              className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition ${
+                loginTab === 'receptionist'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Receptionist Login
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLoginTab('admin');
+                setLocalError(null);
+              }}
+              className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition ${
+                loginTab === 'admin'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Admin Login
+            </button>
+          </div>
+
+          {localError && (
+            <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-xl flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              <span className="text-xs text-red-800 leading-relaxed font-semibold">{localError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleCredentialsSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input 
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@domain.com"
+                  required
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/10 focus:border-slate-800 transition"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Password</label>
+              <div className="relative">
+                <LockKeyhole className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input 
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/10 focus:border-slate-800 transition"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting || loading}
+              className="w-full py-3.5 bg-slate-900 hover:bg-slate-950 text-white rounded-xl text-xs font-black uppercase tracking-widest transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer mt-2"
+            >
+              {submitting || loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                  Verifying...
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 text-amber-500" />
+                  Sign In to Desk
+                </>
+              )}
+            </button>
+          </form>
+
+
+        </div>
+
+        <div className="mt-6 text-center text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+          <p className="flex items-center justify-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-slate-500" />
+            Main Branch • Dharmavaram Branch • Securing HIPAA health protocols
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

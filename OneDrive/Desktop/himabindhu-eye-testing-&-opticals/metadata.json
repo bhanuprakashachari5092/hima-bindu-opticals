@@ -1,0 +1,8 @@
+{
+  "name": "Himabindhu Eye Testing & Opticals",
+  "description": "Comprehensive clinic management platform for eye testing, role-based access control, patient history tracking, prescription management, and professional PDF prescription generation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
