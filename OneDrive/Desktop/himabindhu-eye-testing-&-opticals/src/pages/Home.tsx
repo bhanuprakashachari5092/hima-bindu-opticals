@@ -277,7 +277,7 @@ export default function Home({ onNavigateToLogin }: HomeProps) {
           >
             <h3 
               className="text-6xl md:text-7xl font-black leading-none select-none bg-gradient-to-r from-white via-amber-100 to-amber-400 bg-clip-text text-transparent filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
-              style={{ fontFamily: "'Ramabhadra', sans-serif", fontWeight: 900 }}
+              style={{ fontWeight: 900 }}
             >
               హిమబిందు
             </h3>
@@ -286,14 +286,13 @@ export default function Home({ onNavigateToLogin }: HomeProps) {
             
             <p 
               className="text-3xl md:text-4xl font-black select-none bg-gradient-to-r from-amber-200 to-white bg-clip-text text-transparent filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
-              style={{ fontFamily: "'Ramabhadra', sans-serif", fontWeight: 900 }}
+              style={{ fontWeight: 900 }}
             >
               ఐ టెస్టింగ్ & ఆప్టికల్స్
             </p>
             
             <p 
               className="text-sm md:text-base text-white leading-relaxed max-w-md mx-auto font-extrabold select-none filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
-              style={{ fontFamily: "'Ramabhadra', sans-serif" }}
             >
               కంప్యూటరైజ్డ్ నేత్ర పరీక్షా కేంద్రం మరియు కాంటాక్ట్ లెన్స్ క్లినిక్
             </p>
