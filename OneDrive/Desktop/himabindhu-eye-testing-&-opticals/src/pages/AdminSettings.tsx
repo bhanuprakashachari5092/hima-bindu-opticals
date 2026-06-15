@@ -64,6 +64,13 @@ export default function AdminSettings() {
   const [loginLogs, setLoginLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
 
+  // Clinic schedule & status state
+  const [morningHours, setMorningHours] = useState('9:00 a.m. to 2:00 p.m.');
+  const [eveningHours, setEveningHours] = useState('4:00 p.m. to 9:00 p.m.');
+  const [clinicStatus, setClinicStatus] = useState<'open' | 'half-day' | 'closed'>('open');
+  const [customNotice, setCustomNotice] = useState('');
+  const [scheduleSuccessMsg, setScheduleSuccessMsg] = useState<string | null>(null);
+
   // Fetch all user session audit logs
   const loadLoginLogs = async () => {
     setLoadingLogs(true);
@@ -153,7 +160,40 @@ export default function AdminSettings() {
     loadStaffRegistry();
     loadReceptionList();
     loadLoginLogs();
+
+    // Load clinic schedule & status
+    const savedSchedule = localStorage.getItem('hb_clinic_schedule');
+    if (savedSchedule) {
+      try {
+        const parsed = JSON.parse(savedSchedule);
+        if (parsed.morningHours) setMorningHours(parsed.morningHours);
+        if (parsed.eveningHours) setEveningHours(parsed.eveningHours);
+        if (parsed.status) setClinicStatus(parsed.status);
+        if (parsed.customNotice !== undefined) setCustomNotice(parsed.customNotice);
+      } catch (e) {
+        console.error("Failed to parse clinic schedule", e);
+      }
+    }
   }, [isDemoMode]);
+
+  const handleSaveSchedule = (e: React.FormEvent) => {
+    e.preventDefault();
+    const schedule = {
+      morningHours: morningHours.trim(),
+      eveningHours: eveningHours.trim(),
+      status: clinicStatus,
+      customNotice: customNotice.trim()
+    };
+    localStorage.setItem('hb_clinic_schedule', JSON.stringify(schedule));
+    
+    // Dispatch a storage event to let other parts of the app know immediately
+    window.dispatchEvent(new Event('storage'));
+    
+    setScheduleSuccessMsg("Clinic consulting schedule and status updated successfully!");
+    setTimeout(() => {
+      setScheduleSuccessMsg(null);
+    }, 4000);
+  };
 
   const handleProvisionStaff = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -456,6 +496,150 @@ export default function AdminSettings() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* CLINIC CONSULTING SCHEDULE & STATUS CUSTOMIZER */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="clinic-schedule-customizer">
+        <div className="p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <Clock className="w-5 h-5 text-amber-500" />
+            <h3 className="font-extrabold text-white text-sm uppercase tracking-wider">Clinic consulting schedule & status</h3>
+          </div>
+          <span className="text-[9px] uppercase font-mono bg-slate-950 px-2 py-0.5 rounded text-slate-400">
+            Live Schedule Desk
+          </span>
+        </div>
+
+        {scheduleSuccessMsg && (
+          <div className="mx-6 mt-6 p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-xl flex items-center gap-2.5">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <div className="text-xs text-emerald-800 font-bold">
+              {scheduleSuccessMsg}
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSaveSchedule} className="p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Morning hours */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Morning Session Hours
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                  <Clock className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  placeholder="e.g., 9:00 a.m. to 2:00 p.m."
+                  value={morningHours}
+                  onChange={(e) => setMorningHours(e.target.value)}
+                  required
+                  className="w-full border border-slate-200 bg-slate-50/50 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition"
+                />
+              </div>
+            </div>
+
+            {/* Evening hours */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Evening Session Hours
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                  <Clock className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  placeholder="e.g., 4:00 p.m. to 9:00 p.m."
+                  value={eveningHours}
+                  onChange={(e) => setEveningHours(e.target.value)}
+                  required
+                  className="w-full border border-slate-200 bg-slate-50/50 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition"
+                />
+              </div>
+            </div>
+
+            {/* Status options */}
+            <div className="md:col-span-2">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                Today's Clinic Status (Display on Homepage)
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                
+                {/* OPEN STATUS */}
+                <button
+                  type="button"
+                  onClick={() => setClinicStatus('open')}
+                  className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                    clinicStatus === 'open' 
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-xs' 
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full ${clinicStatus === 'open' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                  <span>Fully Open (Active)</span>
+                </button>
+
+                {/* HALF DAY STATUS */}
+                <button
+                  type="button"
+                  onClick={() => setClinicStatus('half-day')}
+                  className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                    clinicStatus === 'half-day' 
+                      ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-xs' 
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full ${clinicStatus === 'half-day' ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                  <span>Half Working Day</span>
+                </button>
+
+                {/* CLOSED / HOLIDAY STATUS */}
+                <button
+                  type="button"
+                  onClick={() => setClinicStatus('closed')}
+                  className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                    clinicStatus === 'closed' 
+                      ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-xs' 
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full ${clinicStatus === 'closed' ? 'bg-rose-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                  <span>Holiday / Closed</span>
+                </button>
+
+              </div>
+            </div>
+
+            {/* Custom Notice message */}
+            <div className="md:col-span-2">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Custom Status Notice / Announcement (Optional)
+              </label>
+              <textarea
+                rows={2}
+                placeholder="e.g., Clinic closed due to festival holiday. Emergency services call 9010408092."
+                value={customNotice}
+                onChange={(e) => setCustomNotice(e.target.value)}
+                className="w-full border border-slate-200 bg-slate-50/50 focus:bg-white rounded-xl px-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition resize-y"
+              />
+            </div>
+
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 flex justify-end">
+            <button
+              type="submit"
+              className="px-5 py-2.5 bg-slate-900 text-white hover:bg-slate-800 rounded-xl font-bold transition cursor-pointer flex items-center gap-1.5"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Update Clinic Status & Hours</span>
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* RECEPTION LIST SECTION ADDED DIRECTLY TO ADMIN PAGE AS REQUESTED */}

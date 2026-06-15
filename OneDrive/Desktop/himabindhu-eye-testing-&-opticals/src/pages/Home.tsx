@@ -40,11 +40,39 @@ export default function Home({ onNavigateToLogin }: HomeProps) {
   const doctorPhotos = ['/doctor_1.jpg', '/doctor_2.jpg'];
   const [currentPhotoIdx, setCurrentPhotoIdx] = useState(0);
 
+  // Clinic timing and status state
+  const [morningHours, setMorningHours] = useState('9:00 a.m. to 2:00 p.m.');
+  const [eveningHours, setEveningHours] = useState('4:00 p.m. to 9:00 p.m.');
+  const [clinicStatus, setClinicStatus] = useState<'open' | 'half-day' | 'closed'>('open');
+  const [customNotice, setCustomNotice] = useState('');
+
+  const loadClinicSchedule = () => {
+    const saved = localStorage.getItem('hb_clinic_schedule');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.morningHours) setMorningHours(parsed.morningHours);
+        if (parsed.eveningHours) setEveningHours(parsed.eveningHours);
+        if (parsed.status) setClinicStatus(parsed.status);
+        if (parsed.customNotice !== undefined) setCustomNotice(parsed.customNotice);
+      } catch (e) {
+        console.error("Failed to load clinic schedule from localstorage:", e);
+      }
+    }
+  };
+
   React.useEffect(() => {
     const timer = setInterval(() => {
       setCurrentPhotoIdx((prev) => (prev === 0 ? 1 : 0));
     }, 4000);
-    return () => clearInterval(timer);
+    
+    loadClinicSchedule();
+    window.addEventListener('storage', loadClinicSchedule);
+    
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('storage', loadClinicSchedule);
+    };
   }, []);
 
   // Handle patient prescription search
@@ -504,22 +532,62 @@ export default function Home({ onNavigateToLogin }: HomeProps) {
       <section id="timings" className="max-w-5xl mx-auto py-16 px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
         <div className="space-y-6">
           <h3 className="text-2xl font-black text-slate-900 uppercase font-serif">Consulting Schedule</h3>
-          <p className="text-slate-600 text-xs leading-relaxed font-semibold">
-            Visit our computerised diagnostic center during consulting hours. Prior registration is recommended.
-          </p>
+          
+          {/* DYNAMIC CLINIC STATUS INDICATOR */}
+          <div className={`p-4.5 rounded-2xl border flex flex-col gap-2.5 transition-all duration-300 ${
+            clinicStatus === 'open' 
+              ? 'bg-emerald-50/60 border-emerald-200 text-emerald-800' 
+              : clinicStatus === 'half-day'
+              ? 'bg-amber-50/60 border-amber-200 text-amber-800'
+              : 'bg-rose-50/60 border-rose-200 text-rose-800'
+          }`}>
+            <div className="flex items-center gap-2.5">
+              <span className={`w-3 h-3 rounded-full shrink-0 ${
+                clinicStatus === 'open' 
+                  ? 'bg-emerald-500 animate-pulse' 
+                  : clinicStatus === 'half-day'
+                  ? 'bg-amber-500'
+                  : 'bg-rose-500'
+              }`} />
+              <p className="font-extrabold text-xs uppercase tracking-wider">
+                Clinic Status: {
+                  clinicStatus === 'open' 
+                    ? 'Fully Open (Active)' 
+                    : clinicStatus === 'half-day'
+                    ? 'Half Working Day'
+                    : 'Holiday / Closed Today'
+                }
+              </p>
+            </div>
+            
+            {customNotice ? (
+              <p className="text-xs font-semibold leading-relaxed border-t pt-2 border-current/10">
+                {customNotice}
+              </p>
+            ) : (
+              <p className="text-[11px] font-medium leading-relaxed border-t pt-2 border-current/10 opacity-85">
+                {clinicStatus === 'open' 
+                  ? 'Visit during scheduled morning or evening slots. Standard consultation is active.' 
+                  : clinicStatus === 'half-day'
+                  ? 'Please note that the clinic runs for a limited duration today.'
+                  : 'Clinic operations are suspended. Standard diagnostics resume tomorrow.'}
+              </p>
+            )}
+          </div>
+
           <div className="space-y-3">
             <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-150">
               <Clock className="w-5 h-5 text-amber-700" />
               <div className="text-xs">
                 <p className="font-bold text-slate-800">Morning Session</p>
-                <p className="text-slate-550 font-medium">9:00 a.m. to 2:00 p.m.</p>
+                <p className="text-slate-550 font-semibold">{morningHours}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-150">
               <Clock className="w-5 h-5 text-amber-700" />
               <div className="text-xs">
                 <p className="font-bold text-slate-800">Evening Session</p>
-                <p className="text-slate-550 font-medium">4:00 p.m. to 9:00 p.m.</p>
+                <p className="text-slate-550 font-semibold">{eveningHours}</p>
               </div>
             </div>
           </div>
