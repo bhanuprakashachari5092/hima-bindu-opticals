@@ -463,7 +463,7 @@ export default function Home({ onNavigateToLogin }: HomeProps) {
                 M. Nagaraja Achari
               </h3>
               <p className="text-base md:text-lg text-amber-600 font-bold tracking-wide">
-                DOA, Ophthalmix Optom
+                DOA, Ophthalmic Optom
               </p>
             </div>
             
