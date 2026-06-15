@@ -276,8 +276,8 @@ export default function Home({ onNavigateToLogin }: HomeProps) {
             className="lg:col-span-5 flex flex-col justify-center text-center space-y-4 font-telugu"
           >
             <h3 
-              className="text-6xl md:text-7xl font-black leading-none select-none bg-gradient-to-r from-white via-amber-100 to-amber-400 bg-clip-text text-transparent filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
-              style={{ fontWeight: 900 }}
+              className="text-6xl md:text-7xl font-black leading-none tracking-wider select-none bg-gradient-to-r from-white via-amber-100 to-amber-400 bg-clip-text text-transparent filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
+              style={{ fontFamily: "'Ramabhadra', sans-serif", fontWeight: 900 }}
             >
               హిమబిందు
             </h3>
@@ -285,14 +285,15 @@ export default function Home({ onNavigateToLogin }: HomeProps) {
             <div className="h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent my-2 max-w-xs mx-auto w-full"></div>
             
             <p 
-              className="text-3xl md:text-4xl font-black select-none bg-gradient-to-r from-amber-200 to-white bg-clip-text text-transparent filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
-              style={{ fontWeight: 900 }}
+              className="text-3xl md:text-4xl font-black tracking-wider select-none bg-gradient-to-r from-amber-200 to-white bg-clip-text text-transparent filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
+              style={{ fontFamily: "'Ramabhadra', sans-serif", fontWeight: 900 }}
             >
               ఐ టెస్టింగ్ & ఆప్టికల్స్
             </p>
             
             <p 
-              className="text-sm md:text-base text-white leading-relaxed max-w-md mx-auto font-extrabold select-none filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
+              className="text-sm md:text-base text-white leading-relaxed max-w-md mx-auto font-extrabold select-none tracking-wide filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
+              style={{ fontFamily: "'Ramabhadra', sans-serif", letterSpacing: '0.03em' }}
             >
               కంప్యూటరైజ్డ్ నేత్ర పరీక్షా కేంద్రం మరియు కాంటాక్ట్ లెన్స్ క్లినిక్
             </p>
