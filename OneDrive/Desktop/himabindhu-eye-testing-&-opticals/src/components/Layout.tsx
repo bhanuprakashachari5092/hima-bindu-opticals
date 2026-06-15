@@ -277,18 +277,31 @@ export default function Layout({ activeTab, setActiveTab, children }: LayoutProp
         </AnimatePresence>
 
         {/* Console Workspace Area */}
-        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden min-h-[calc(100vh-68px)]">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.15 }}
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden min-h-[calc(100vh-68px)] flex flex-col justify-between">
+          <div className="flex-1">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+          <footer className="mt-12 pt-5 border-t border-slate-200/80 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs font-semibold text-slate-400 font-sans">
+            <p>© 2026 Himabindhu Eye Clinic. All rights reserved.</p>
+            <div className="flex flex-wrap items-center justify-center gap-1.5 md:gap-2 text-[10.5px] text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-150">
+              <span>Developed by</span>
+              <span className="font-extrabold text-slate-800 uppercase tracking-wider">Shaivika Groups</span>
+              <span className="text-slate-300">•</span>
+              <a href="tel:8985541157" className="hover:text-teal-600 transition-colors font-mono font-bold">8985541157</a>
+              <span className="text-slate-300">•</span>
+              <a href="mailto:shaivikagroups@gmail.com" className="hover:text-teal-600 transition-colors">shaivikagroups@gmail.com</a>
+            </div>
+          </footer>
         </main>
       </div>
     </div>

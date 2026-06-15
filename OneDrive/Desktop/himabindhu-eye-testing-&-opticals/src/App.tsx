@@ -5,7 +5,6 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
-import PatientManagement from './pages/PatientManagement';
 import PrescriptionEntry from './pages/PrescriptionEntry';
 import PatientHistory from './pages/PatientHistory';
 import AdminSettings from './pages/AdminSettings';

@@ -628,6 +628,21 @@ export default function Home({ onNavigateToLogin }: HomeProps) {
           </div>
         </div>
       </section>
+
+      {/* Premium Footer */}
+      <footer className="bg-slate-950 text-white border-t border-slate-900 py-8 px-6 text-center">
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium text-slate-450">
+          <p>© 2026 Himabindhu Eye Testing & Opticals. All rights reserved.</p>
+          <div className="flex flex-wrap items-center justify-center gap-1.5 md:gap-2 text-[11px] text-slate-300 bg-slate-900/50 px-4 py-2 rounded-xl border border-slate-800/80">
+            <span>Developed by</span>
+            <span className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-200 uppercase tracking-wider">Shaivika Groups</span>
+            <span className="text-slate-700">•</span>
+            <a href="tel:8985541157" className="hover:text-amber-400 transition-colors font-mono font-bold">8985541157</a>
+            <span className="text-slate-700">•</span>
+            <a href="mailto:shaivikagroups@gmail.com" className="hover:text-amber-400 transition-colors">shaivikagroups@gmail.com</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
