@@ -19,7 +19,8 @@ import {
   RotateCcw,
   Eye,
   Printer,
-  Download
+  Download,
+  MessageCircle
 } from 'lucide-react';
 
 interface Patient {
@@ -580,6 +581,61 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
     }
   };
 
+  // ── WhatsApp Send Handler ──────────────────────────────────────────────────
+  const handleSendWhatsApp = () => {
+    let targetPhone = mobile.trim().replace(/\D/g, '');
+    if (!targetPhone) {
+      alert("Please enter a valid mobile number for the patient first.");
+      return;
+    }
+    if (targetPhone.length === 10) {
+      targetPhone = '91' + targetPhone; // Prefix India code if 10-digit
+    }
+
+    const fmt = (v: string | undefined) => (v && v !== '—' && v !== '') ? v : '—';
+
+    const msg = [
+      `🏥 *Himabindhu Eye Testing & Opticals*`,
+      `📍 Dharmavaram, Andhra Pradesh | 📞 9949334443`,
+      ``,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `📋 *PRESCRIPTION DETAILS*`,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      ``,
+      `👤 *Patient:* ${patientName || '—'}`,
+      `🆔 *Patient ID:* ${patientId || '—'}`,
+      `📅 *Date:* ${date}`,
+      `🎂 *Age:* ${age || '—'} yrs   |   *Gender:* ${gender}`,
+      `📱 *Mobile:* ${mobile || '—'}`,
+      `🔖 *Rx ID:* ${prescriptionId || '—'}`,
+      ``,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `👁️ *RIGHT EYE (OD)*`,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `*Distance:* SPH: ${fmt(reSphDist)} | CYL: ${fmt(reCylDist)} | AXIS: ${fmt(reAxisDist)}° | Vision: ${reVisionDist}`,
+      `*Near:* SPH: ${fmt(reSphNear)} | CYL: ${fmt(reCylNear)} | AXIS: ${fmt(reAxisNear)}° | Vision: ${reVisionNear}`,
+      reAdd ? `*ADD:* +${reAdd}` : null,
+      ``,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `👁️ *LEFT EYE (OS)*`,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `*Distance:* SPH: ${fmt(leSphDist)} | CYL: ${fmt(leCylDist)} | AXIS: ${fmt(leAxisDist)}° | Vision: ${leVisionDist}`,
+      `*Near:* SPH: ${fmt(leSphNear)} | CYL: ${fmt(leCylNear)} | AXIS: ${fmt(leAxisNear)}° | Vision: ${leVisionNear}`,
+      leAdd ? `*ADD:* +${leAdd}` : null,
+      ``,
+      pd ? `📏 *PD:* ${pd} mm` : null,
+      selectedAdvice.length > 0 ? `💊 *Advice:* ${selectedAdvice.join(', ')}` : null,
+      notes ? `📝 *Notes:* ${notes}` : null,
+      ``,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `_Thank you for visiting Himabindhu Opticals! 🙏_`,
+    ].filter(v => v !== null).join('\n');
+
+    const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+  };
+  // ────────────────────────────────────────────────────────────────────────────
+
   const livePreviewRx: Prescription = {
     prescriptionId: prescriptionId || 'RX-TEMP',
     patientId: patientId || 'HB-TEMP',
@@ -993,14 +1049,26 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
                   </PDFDownloadLink>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isSaving || isLoadingRxId}
-                  className="px-6 py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-sm transition cursor-pointer"
-                >
-                  <Save className="w-4.5 h-4.5" />
-                  {isSaving ? "Saving..." : "Finalize & Synchronize"}
-                </button>
+                <div className="flex flex-wrap gap-2.5">
+                  <button
+                    type="submit"
+                    disabled={isSaving || isLoadingRxId}
+                    className="px-6 py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-sm transition cursor-pointer"
+                  >
+                    <Save className="w-4.5 h-4.5" />
+                    {isSaving ? "Saving..." : "Finalize & Synchronize"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSendWhatsApp}
+                    className="px-5 py-2.5 bg-[#25D366] hover:bg-[#20b858] text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-sm transition cursor-pointer"
+                    title="Send prescription via WhatsApp"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Send via WhatsApp
+                  </button>
+                </div>
               </div>
 
             </form>
