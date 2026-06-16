@@ -20,7 +20,8 @@ import {
   Eye,
   Printer,
   Download,
-  MessageCircle
+  MessageCircle,
+  Settings
 } from 'lucide-react';
 
 interface Patient {
@@ -136,6 +137,20 @@ interface PrescriptionEntryProps {
 
 export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPatient }: PrescriptionEntryProps) {
   const { isDemoMode } = useAuth();
+
+  // WhatsApp Settings state
+  const [showWASettings, setShowWASettings] = useState(false);
+  const [waApiType, setWaApiType] = useState(() => localStorage.getItem('hb_wa_api_type') || 'direct');
+  const [waInstanceId, setWaInstanceId] = useState(() => localStorage.getItem('hb_wa_instance_id') || '');
+  const [waToken, setWaToken] = useState(() => localStorage.getItem('hb_wa_token') || '');
+
+  const handleSaveWASettings = () => {
+    localStorage.setItem('hb_wa_api_type', waApiType);
+    localStorage.setItem('hb_wa_instance_id', waInstanceId);
+    localStorage.setItem('hb_wa_token', waToken);
+    setShowWASettings(false);
+    alert("WhatsApp API configurations saved successfully!");
+  };
 
   // Search/Lookup State
   const [patientsList, setPatientsList] = useState<Patient[]>([]);
@@ -631,6 +646,63 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
       `_Thank you for visiting Himabindhu Opticals! 🙏_`,
     ].filter(v => v !== null).join('\n');
 
+    if (waApiType === 'green-api') {
+      if (!waInstanceId || !waToken) {
+        alert("Please configure Green API Instance ID and Token in WhatsApp Settings first!");
+        return;
+      }
+      
+      const chatId = `${targetPhone}@c.us`;
+      fetch(`https://api.green-api.com/waInstance${waInstanceId}/sendMessage/${waToken}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId, message: msg })
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("API status " + res.status);
+        return res.json();
+      })
+      .then(() => {
+        alert("Prescription message sent automatically via Green API! ✅");
+      })
+      .catch(err => {
+        console.error("Green API Error:", err);
+        alert("WhatsApp API send failed. Opening web link instead...");
+        window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+      });
+      return;
+    }
+
+    if (waApiType === 'ultramsg') {
+      if (!waInstanceId || !waToken) {
+        alert("Please configure UltraMsg Instance ID and Token in WhatsApp Settings first!");
+        return;
+      }
+
+      fetch(`https://api.ultramsg.com/${waInstanceId}/messages/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: waToken,
+          to: targetPhone,
+          body: msg
+        })
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("API status " + res.status);
+        return res.json();
+      })
+      .then(() => {
+        alert("Prescription message sent automatically via UltraMsg! ✅");
+      })
+      .catch(err => {
+        console.error("UltraMsg Error:", err);
+        alert("WhatsApp API send failed. Opening web link instead...");
+        window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+      });
+      return;
+    }
+
     if ((window as any).require) {
       try {
         const { ipcRenderer } = (window as any).require('electron');
@@ -682,7 +754,15 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
                 <FileSpreadsheet className="w-5 h-5 text-blue-200" />
                 <h3 className="font-extrabold text-white text-md">Ophthalmic Refraction Entry Desk</h3>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowWASettings(true)}
+                  className="p-1 text-slate-400 hover:text-white transition rounded-md hover:bg-slate-800 cursor-pointer flex items-center justify-center"
+                  title="Configure WhatsApp API Settings"
+                >
+                  <Settings className="w-4.5 h-4.5" />
+                </button>
                 <span className="text-[10px] bg-slate-950 px-2 py-0.5 rounded font-mono text-amber-300 font-bold">
                   {isLoadingRxId ? "SYNCING Rx ID..." : `Active Rx: ${prescriptionId}`}
                 </span>
@@ -1084,6 +1164,104 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
             </form>
           </div>
         </div>
+
+        {/* WhatsApp Settings Modal */}
+        {showWASettings && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-150 max-w-md w-full overflow-hidden transition-all transform scale-100">
+              {/* Header */}
+              <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-blue-400" />
+                  <h3 className="font-extrabold text-sm text-white">WhatsApp Automation Config</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowWASettings(false)}
+                  className="text-gray-400 hover:text-white transition text-lg font-bold cursor-pointer"
+                >
+                  &times;
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                    Integration Type
+                  </label>
+                  <select
+                    value={waApiType}
+                    onChange={(e) => setWaApiType(e.target.value)}
+                    className="w-full border border-gray-300 bg-white rounded-lg px-3 py-2 text-xs font-semibold text-gray-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="direct">Direct Link (Opens Web/App Chat - Free)</option>
+                    <option value="green-api">Green API (Auto Send - Free/Paid)</option>
+                    <option value="ultramsg">UltraMsg (Auto Send - Paid)</option>
+                  </select>
+                </div>
+
+                {waApiType !== 'direct' && (
+                  <>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-800 leading-relaxed">
+                      💡 <strong>Setup Tip:</strong> Scan the QR code in your provider's dashboard (Green API or UltraMsg) to pair your phone number. Then paste the credentials below.
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                        Instance ID
+                      </label>
+                      <input
+                        type="text"
+                        value={waInstanceId}
+                        onChange={(e) => setWaInstanceId(e.target.value)}
+                        placeholder="e.g. 1101825700"
+                        className="w-full border border-gray-300 bg-white rounded-lg px-3 py-2 text-xs font-mono text-gray-700 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                        API Token / Token Instance
+                      </label>
+                      <input
+                        type="password"
+                        value={waToken}
+                        onChange={(e) => setWaToken(e.target.value)}
+                        placeholder="Paste your API Token instance"
+                        className="w-full border border-gray-300 bg-white rounded-lg px-3 py-2 text-xs font-mono text-gray-700 focus:outline-hidden"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {waApiType === 'direct' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[11px] text-blue-800 leading-relaxed">
+                    ℹ️ <strong>Direct Link Mode:</strong> No account setup required. Clicking "Send" will launch WhatsApp with the text pre-filled, but requires you to click "Send" inside WhatsApp.
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowWASettings(false)}
+                  className="px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-600 rounded-lg text-xs font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveWASettings}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition cursor-pointer"
+                >
+                  Save Config
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
   );
 }
