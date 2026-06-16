@@ -61,6 +61,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
   const [orderPrice, setOrderPrice] = useState('');
   const [orderStatus, setOrderStatus] = useState<'Pending' | 'Ready'>('Pending');
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+  const [isOrderSent, setIsOrderSent] = useState(false);
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -158,18 +159,25 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     setLensType(rx.lensType || '');
     setOrderPrice(rx.orderPrice || '');
     setOrderStatus(rx.orderStatus || 'Pending');
+    setIsOrderSent(rx.isOrderSent || false);
   };
 
   const handleSaveOrder = async () => {
     if (!selectedRx) return;
     setIsUpdatingOrder(true);
 
+    const hasChanges = 
+      frameName.trim() !== (selectedRx.frameName || '') ||
+      lensType.trim() !== (selectedRx.lensType || '') ||
+      orderPrice.trim() !== (selectedRx.orderPrice || '');
+
     const updatedData = {
       frameName: frameName.trim(),
       lensType: lensType.trim(),
       orderStatus: orderStatus,
       orderPrice: orderPrice.trim(),
-      isNotified: selectedRx.orderStatus === orderStatus ? (selectedRx.isNotified || false) : false
+      isNotified: selectedRx.orderStatus === orderStatus ? (selectedRx.isNotified || false) : false,
+      isOrderSent: hasChanges ? false : (selectedRx.isOrderSent || false)
     };
 
     if (isDemoMode) {
@@ -187,6 +195,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
       setSelectedRx(newSelected);
       setAllPrescriptions(updatedList);
       setRecentPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? newSelected : p));
+      setIsOrderSent(newSelected.isOrderSent || false);
       
       alert(`Spectacle Order for ${selectedRx.patientName} saved! Status: ${orderStatus}.`);
       setIsUpdatingOrder(false);
@@ -199,6 +208,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
         setSelectedRx(newSelected);
         setAllPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? newSelected : p));
         setRecentPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? newSelected : p));
+        setIsOrderSent(newSelected.isOrderSent || false);
         
         alert(`Spectacle Order for ${selectedRx.patientName} updated in clinical database!`);
       } catch (err) {
@@ -210,7 +220,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     }
   };
 
-  const handleSendOrderWhatsApp = () => {
+  const handleSendOrderWhatsApp = async () => {
     if (!selectedRx) return;
     const cleanPhone = selectedRx.mobile.replace(/\D/g, '');
     const targetPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
@@ -236,6 +246,32 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
       `━━━━━━━━━━━━━━━━━━━━━━`,
       `_We have started preparing your custom spectacles in our lab. We will notify you once they are ready for collection! Thank you! 🙏_`
     ].filter(v => v !== null).join('\n');
+    
+    const updatedData = { isOrderSent: true };
+    if (isDemoMode) {
+      const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
+      const list = JSON.parse(stored) as Prescription[];
+      const updatedList = list.map(rx => {
+        if (rx.prescriptionId === selectedRx.prescriptionId) {
+          return { ...rx, ...updatedData };
+        }
+        return rx;
+      });
+      localStorage.setItem('hb_demo_prescriptions', JSON.stringify(updatedList));
+      setSelectedRx(prev => prev ? { ...prev, ...updatedData } : null);
+      setAllPrescriptions(updatedList);
+      setIsOrderSent(true);
+    } else {
+      try {
+        const rxRef = doc(db, 'prescriptions', selectedRx.prescriptionId);
+        await updateDoc(rxRef, updatedData);
+        setSelectedRx(prev => prev ? { ...prev, ...updatedData } : null);
+        setAllPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? { ...p, ...updatedData } : p));
+        setIsOrderSent(true);
+      } catch (err) {
+        console.error("Failed to update order sent status:", err);
+      }
+    }
     
     const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
@@ -573,11 +609,16 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                     <button
                       type="button"
                       onClick={handleSendOrderWhatsApp}
-                      className="py-2.5 bg-slate-900 hover:bg-slate-850 text-white border border-slate-800 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition cursor-pointer"
-                      title="Send Order details to patient"
+                      disabled={isOrderSent}
+                      className={`py-2.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition cursor-pointer ${
+                        isOrderSent
+                          ? 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
+                          : 'bg-slate-900 hover:bg-slate-850 text-white border border-slate-800'
+                      }`}
+                      title={isOrderSent ? "Order details already sent" : "Send Order details to patient"}
                     >
-                      <MessageCircle className="w-4 h-4 text-emerald-450" />
-                      <span>Send Order details</span>
+                      <MessageCircle className={`w-4 h-4 ${isOrderSent ? 'text-slate-300' : 'text-emerald-400'}`} />
+                      <span>{isOrderSent ? 'Order Details Sent' : 'Send Order details'}</span>
                     </button>
 
                     <button

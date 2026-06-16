@@ -219,6 +219,7 @@ export interface Prescription {
   orderStatus?: 'Pending' | 'Ready';
   orderPrice?: string;
   isNotified?: boolean;
+  isOrderSent?: boolean;
 }
 
 interface PrescriptionPDFProps {
