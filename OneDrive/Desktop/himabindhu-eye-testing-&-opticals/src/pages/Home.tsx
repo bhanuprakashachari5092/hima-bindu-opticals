@@ -114,6 +114,14 @@ const frameCategories = [
   }
 ];
 
+const clinicImages = [
+  { url: '/clinic_slit_lamp_1.jpg', caption: 'Computerised Eye Refraction Testing' },
+  { url: '/clinic_interior.jpg', caption: 'Premium Optical Showroom & Consultation Desk' },
+  { url: '/clinic_sunglasses.jpg', caption: 'Luxury Branded Sunglasses Collection' },
+  { url: '/clinic_slit_lamp_2.jpg', caption: 'Comprehensive Vision Care & Patient Diagnostic' },
+  { url: '/clinic_frames_close.jpg', caption: 'Precision Engineered Optical Frame Selection' }
+];
+
 interface HomeProps {
   onNavigateToLogin: () => void;
   onSelectFrameType: (id: string) => void;
@@ -122,6 +130,23 @@ interface HomeProps {
 export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps) {
   const { isDemoMode, setDemoProfile } = useAuth();
   const [activeCategory, setActiveCategory] = useState(frameCategories[0]);
+
+  // Clinic gallery state
+  const [currentGalleryIdx, setCurrentGalleryIdx] = useState(0);
+  const [isFlashing, setIsFlashing] = useState(false);
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setIsFlashing(true);
+      setTimeout(() => {
+        setCurrentGalleryIdx((prev) => (prev + 1) % clinicImages.length);
+      }, 250);
+      setTimeout(() => {
+        setIsFlashing(false);
+      }, 500);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, []);
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -637,6 +662,109 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
         </div>
       </section>
 
+      {/* Clinic Showcase & Luxury Gallery */}
+      <section className="bg-slate-50 py-20 px-6 border-b border-slate-150">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 items-center gap-12">
+          {/* Left Column: Natural luxury description */}
+          <div className="lg:col-span-6 space-y-6">
+            <div className="space-y-2">
+              <span className="px-3.5 py-1 bg-amber-50 text-amber-805 border border-amber-200 rounded-full text-[10px] font-black uppercase tracking-widest inline-block select-none shadow-sm shadow-amber-50">
+                Himabindhu Experience
+              </span>
+              <h3 className="text-3xl md:text-4xl font-black text-slate-900 font-serif leading-tight">
+                Where Vision Precision Meets Luxury Eyewear
+              </h3>
+            </div>
+            
+            <p className="text-slate-600 text-xs md:text-sm leading-relaxed font-semibold">
+              Step into Himabindhu Eye Testing & Opticals for an unparalleled optical experience. 
+              Serving the Dharmavaram community with pride, our clinic features high-precision computerized eye examination labs combined with a beautifully curated gallery of international designer frames.
+            </p>
+            
+            <p className="text-slate-600 text-xs md:text-sm leading-relaxed font-semibold">
+              Under the veteran care of chief optometrist <strong>M. Nagaraja Achari</strong>, we perform meticulous diagnostic refractions to ensure your prescription is absolutely perfect. 
+              We don't just test your eyes; we craft a custom visual identity for you with our range of high-definition progressive lenses, computerised blue-light shields, and hand-selected luxury frames.
+            </p>
+
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 shadow-sm">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <p className="text-xs font-bold text-slate-700">Meticulous computerised eye examinations using state-of-the-art diagnostic slit-lamps.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 shadow-sm">
+                  <Glasses className="w-4 h-4" />
+                </div>
+                <p className="text-xs font-bold text-slate-700">A premium boutique of designer frames, durable double-rim layouts, and elegant shapes.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 shadow-sm">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <p className="text-xs font-bold text-slate-700">Personalized lens counseling to match your daily screen time, driving, and lifestyle needs.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Carousel with flash animation */}
+          <div className="lg:col-span-6">
+            <div className="relative aspect-[4/3] rounded-3xl overflow-hidden border border-slate-200/80 shadow-2xl bg-slate-950 group">
+              {/* Active Image */}
+              <img
+                src={clinicImages[currentGalleryIdx].url}
+                alt={clinicImages[currentGalleryIdx].caption}
+                className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-[1.03] ${
+                  isFlashing ? 'brightness-[2.2] scale-[0.995] filter contrast-[0.9]' : 'brightness-[1] scale-100 filter contrast-100'
+                }`}
+              />
+
+              {/* Camera Flash Overlay */}
+              <div
+                className={`absolute inset-0 bg-white pointer-events-none z-20 transition-opacity duration-300 ${
+                  isFlashing ? 'opacity-95' : 'opacity-0'
+                }`}
+              />
+
+              {/* Carousel Indicators & Captions */}
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent p-6 z-10 space-y-2">
+                <span className="px-2 py-0.5 bg-amber-500 text-slate-950 text-[9px] font-black uppercase tracking-wider rounded-full shadow-md">
+                  Clinic Showcase
+                </span>
+                <h4 className="text-sm md:text-base font-black text-white leading-tight mt-1">
+                  {clinicImages[currentGalleryIdx].caption}
+                </h4>
+                <div className="flex items-center gap-2 pt-2">
+                  {clinicImages.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        if (isFlashing) return;
+                        setIsFlashing(true);
+                        setTimeout(() => {
+                          setCurrentGalleryIdx(idx);
+                        }, 250);
+                        setTimeout(() => {
+                          setIsFlashing(false);
+                        }, 500);
+                      }}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        currentGalleryIdx === idx
+                          ? 'w-6 bg-amber-400'
+                          : 'w-1.5 bg-white/40 hover:bg-white/60'
+                      }`}
+                      aria-label={`Show slide ${idx + 1}`}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Luxury Frame Styles Showcase */}
       <section className="bg-slate-950 text-white py-24 px-6 relative overflow-hidden">
         {/* Ambient glow */}
@@ -815,17 +943,29 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
                 <p className="text-slate-400 mt-1 leading-normal">RS Road, Gandhi Nagar, Dharmavaram - 515671. (A.P.)</p>
               </div>
             </div>
-                        <div className="w-full h-40 rounded-2xl overflow-hidden border border-slate-750/70 shadow-md relative group hover:border-amber-500 transition-colors duration-300">
+            <a 
+              href="https://maps.app.goo.gl/ajYQbKyGp9sG959c9" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="block w-full h-40 rounded-2xl overflow-hidden border border-slate-750/70 shadow-md relative group hover:border-amber-500 transition-colors duration-300"
+            >
               <iframe 
                 src="https://maps.google.com/maps?q=Apollo%20Pharmacy,%20RS%20Road,%20Gandhi%20Nagar,%20Dharmavaram&t=k&z=18&output=embed" 
                 width="100%" 
                 height="100%" 
-                style={{ border: 0, filter: 'brightness(0.95)' }} 
+                style={{ border: 0, filter: 'brightness(0.95)', pointerEvents: 'none' }} 
                 allowFullScreen={true} 
                 loading="lazy"
                 title="Himabindhu Opticals Satellite Map"
               ></iframe>
-            </div>
+              
+              {/* Luxury Map Action Overlay */}
+              <div className="absolute inset-0 bg-slate-950/20 group-hover:bg-slate-950/45 transition-all duration-300 flex items-center justify-center">
+                <span className="px-4 py-2 bg-amber-500 text-slate-950 text-xs font-black rounded-xl shadow-lg transition-all duration-300 transform scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100 uppercase tracking-widest flex items-center gap-1.5">
+                  Get Directions →
+                </span>
+              </div>
+            </a>
             <div className="flex gap-3 text-xs">
               <Phone className="w-5 h-5 text-amber-400 shrink-0" />
               <div>

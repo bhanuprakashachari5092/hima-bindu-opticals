@@ -323,6 +323,9 @@ export default function AdminSettings() {
     p.mobile.includes(patientSearch)
   );
 
+  // Filter only receptionist logs
+  const receptionistLogs = loginLogs.filter(log => log.role?.toLowerCase() === 'receptionist');
+
   return (
     <div className="space-y-8 font-sans">
       
@@ -750,10 +753,10 @@ export default function AdminSettings() {
             <Loader2 className="w-8 h-8 animate-spin text-teal-600 mb-3" />
             <p className="text-xs uppercase tracking-wider">Loading login audit trail...</p>
           </div>
-        ) : loginLogs.length === 0 ? (
+        ) : receptionistLogs.length === 0 ? (
           <div className="p-16 text-center text-slate-450 font-bold">
-            <p className="text-xs uppercase tracking-wider">No login sessions recorded</p>
-            <p className="text-[11px] text-slate-400 mt-1 italic font-normal">Session logs will begin populating automatically as staff authenticate.</p>
+            <p className="text-xs uppercase tracking-wider">No receptionist login sessions recorded</p>
+            <p className="text-[11px] text-slate-400 mt-1 italic font-normal">Session logs will begin populating automatically as receptionists authenticate.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -769,7 +772,7 @@ export default function AdminSettings() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-150 text-slate-700 font-semibold font-sans">
-                {loginLogs
+                {receptionistLogs
                   .map((log, index) => (
                     <tr key={log.loginTime + '_' + index} className="hover:bg-slate-50/50 transition">
                       <td className="py-4 px-6 text-slate-500 font-mono text-[11px]">
