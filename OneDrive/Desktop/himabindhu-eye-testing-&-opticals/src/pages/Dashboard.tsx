@@ -162,6 +162,82 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     setIsOrderSent(rx.isOrderSent || false);
   };
 
+  const syncOrderToGoogleSheet = async (rx: Prescription, updatedData: any) => {
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyxeBKUjjpG7InOmRAHTAEcExQKt3chvyIN7MkO4pZYwID4uWs7uZCjiPG-0cHPlkg/exec";
+
+    const formatPower = (eyeData: any) => {
+      if (!eyeData) return "—";
+      const dist = eyeData.distance || {};
+      const near = eyeData.near || {};
+      const addVal = eyeData.add ? `, Add: ${eyeData.add}` : "";
+      return `[Dist] Sph: ${dist.sph || "Nil"}, Cyl: ${dist.cyl || "Nil"}, Axis: ${dist.axis || "Nil"} | [Near] Sph: ${near.sph || "Nil"}, Cyl: ${near.cyl || "Nil"}${addVal}`;
+    };
+
+    const payload = {
+      type: "order",
+      patientId: rx.patientId,
+      prescriptionId: rx.prescriptionId,
+      patientName: rx.patientName,
+      mobile: rx.mobile,
+      frameName: updatedData.frameName,
+      lensType: updatedData.lensType,
+      orderPrice: updatedData.orderPrice,
+      orderStatus: updatedData.orderStatus,
+      isOrderSent: updatedData.isOrderSent || false,
+      isNotified: updatedData.isNotified || false,
+      rePower: formatPower(rx.rightEyeData),
+      lePower: formatPower(rx.leftEyeData)
+    };
+
+    try {
+      if ((window as any).require) {
+        try {
+          const https = (window as any).require('https');
+          const options = {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          };
+
+          const makeRequest = (targetUrl: string) => {
+            const req = https.request(new URL(targetUrl), options, (res: any) => {
+              if (res.statusCode === 301 || res.statusCode === 302) {
+                makeRequest(res.headers.location);
+                return;
+              }
+            });
+            req.on('error', (e: any) => {
+              console.error("Node HTTPS post to GSheets failed:", e);
+            });
+            req.write(JSON.stringify(payload));
+            req.end();
+          };
+          makeRequest(APPS_SCRIPT_URL);
+        } catch (err) {
+          fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+        }
+      } else {
+        fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+      }
+      console.log("Synced order to Google Sheets successfully.");
+    } catch (error) {
+      console.error("Error syncing to Google Sheet:", error);
+    }
+  };
+
   const handleSaveOrder = async () => {
     if (!selectedRx) return;
     setIsUpdatingOrder(true);
@@ -197,6 +273,8 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
       setRecentPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? newSelected : p));
       setIsOrderSent(newSelected.isOrderSent || false);
       
+      syncOrderToGoogleSheet(selectedRx, updatedData);
+
       alert(`Spectacle Order for ${selectedRx.patientName} saved! Status: ${orderStatus}.`);
       setIsUpdatingOrder(false);
     } else {
@@ -210,6 +288,8 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
         setRecentPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? newSelected : p));
         setIsOrderSent(newSelected.isOrderSent || false);
         
+        syncOrderToGoogleSheet(selectedRx, updatedData);
+
         alert(`Spectacle Order for ${selectedRx.patientName} updated in clinical database!`);
       } catch (err) {
         console.error("Failed to update prescription order:", err);
@@ -248,6 +328,15 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     ].filter(v => v !== null).join('\n');
     
     const updatedData = { isOrderSent: true };
+    const sheetData = {
+      frameName: frameName.trim(),
+      lensType: lensType.trim(),
+      orderPrice: orderPrice.trim(),
+      orderStatus: orderStatus,
+      isNotified: selectedRx.isNotified || false,
+      isOrderSent: true
+    };
+
     if (isDemoMode) {
       const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
       const list = JSON.parse(stored) as Prescription[];
@@ -261,6 +350,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
       setSelectedRx(prev => prev ? { ...prev, ...updatedData } : null);
       setAllPrescriptions(updatedList);
       setIsOrderSent(true);
+      syncOrderToGoogleSheet(selectedRx, sheetData);
     } else {
       try {
         const rxRef = doc(db, 'prescriptions', selectedRx.prescriptionId);
@@ -268,6 +358,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
         setSelectedRx(prev => prev ? { ...prev, ...updatedData } : null);
         setAllPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? { ...p, ...updatedData } : p));
         setIsOrderSent(true);
+        syncOrderToGoogleSheet(selectedRx, sheetData);
       } catch (err) {
         console.error("Failed to update order sent status:", err);
       }
@@ -306,6 +397,15 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     ].join('\n');
     
     const updatedData = { isNotified: true };
+    const sheetData = {
+      frameName: frameName.trim(),
+      lensType: lensType.trim(),
+      orderPrice: orderPrice.trim(),
+      orderStatus: orderStatus,
+      isNotified: true,
+      isOrderSent: isOrderSent
+    };
+
     if (isDemoMode) {
       const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
       const list = JSON.parse(stored) as Prescription[];
@@ -318,12 +418,14 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
       localStorage.setItem('hb_demo_prescriptions', JSON.stringify(updatedList));
       setSelectedRx(prev => prev ? { ...prev, ...updatedData } : null);
       setAllPrescriptions(updatedList);
+      syncOrderToGoogleSheet(selectedRx, sheetData);
     } else {
       try {
         const rxRef = doc(db, 'prescriptions', selectedRx.prescriptionId);
         await updateDoc(rxRef, updatedData);
         setSelectedRx(prev => prev ? { ...prev, ...updatedData } : null);
         setAllPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? { ...p, ...updatedData } : p));
+        syncOrderToGoogleSheet(selectedRx, sheetData);
       } catch (err) {
         console.error("Failed to update notified status:", err);
       }
