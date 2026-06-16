@@ -10,7 +10,8 @@ import {
   doc,
   setDoc,
   deleteDoc,
-  serverTimestamp
+  serverTimestamp,
+  updateDoc
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../config/firebase';
 import { Prescription } from '../components/PrescriptionPDF';
@@ -27,7 +28,11 @@ import {
   Shield,
   Trash2,
   Mail,
-  User
+  User,
+  Search,
+  MessageCircle,
+  Save,
+  Clock
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -47,6 +52,16 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
   const [recentPrescriptions, setRecentPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Receptionist States
+  const [allPrescriptions, setAllPrescriptions] = useState<Prescription[]>([]);
+  const [receptionSearch, setReceptionSearch] = useState('');
+  const [selectedRx, setSelectedRx] = useState<Prescription | null>(null);
+  const [frameName, setFrameName] = useState('');
+  const [lensType, setLensType] = useState('');
+  const [orderPrice, setOrderPrice] = useState('');
+  const [orderStatus, setOrderStatus] = useState<'Pending' | 'Ready'>('Pending');
+  const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+
   useEffect(() => {
     async function loadDashboardData() {
       setLoading(true);
@@ -59,7 +74,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
         
         try {
           const patients = JSON.parse(demoPatientsStr);
-          const rxList = JSON.parse(demoRxStr);
+          const rxList = JSON.parse(demoRxStr) as Prescription[];
 
           // Today count
           const todayPatients = patients.filter((p: any) => p.date === todayString).length;
@@ -73,9 +88,10 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
             monthlyCount: monthlyPatients || patients.length
           });
 
-          // Sorted recent 5 rx
-          const sortedRx = [...rxList].sort((a: any, b: any) => b.prescriptionId.localeCompare(a.prescriptionId)).slice(0, 5);
-          setRecentPrescriptions(sortedRx);
+          // Sorted prescriptions
+          const sortedRx = [...rxList].sort((a, b) => b.prescriptionId.localeCompare(a.prescriptionId));
+          setRecentPrescriptions(sortedRx.slice(0, 5));
+          setAllPrescriptions(sortedRx);
         } catch (e) {
           console.error("Demo parsing error", e);
         }
@@ -110,16 +126,16 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
           monthlyCount: monthlyCount || totalPatients
         });
 
-        // 5 most recent prescriptions sorted by id desc
-        const rxQuery = query(prescriptionsRef, orderBy('prescriptionId', 'desc'), limit(5));
-        const rxSnap = await getDocs(rxQuery).catch((err) => {
-          console.warn("Retrying query without ordering if composite index is registering", err);
+        // Load recent prescriptions
+        const rxSnap = await getDocs(prescriptionsRef).catch((err) => {
           return getDocs(prescriptionsRef);
         });
 
         if (rxSnap) {
           const rawRx = rxSnap.docs.map(doc => ({ ...doc.data() }) as Prescription);
-          setRecentPrescriptions(rawRx.slice(0, 5));
+          const sortedList = rawRx.sort((a, b) => b.prescriptionId.localeCompare(a.prescriptionId));
+          setRecentPrescriptions(sortedList.slice(0, 5));
+          setAllPrescriptions(sortedList);
         }
       } catch (error) {
         console.error("Firestore dashboard load error", error);
@@ -129,12 +145,467 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     }
 
     loadDashboardData();
-  }, [isDemoMode]);
+  }, [isDemoMode, userProfile]);
 
   const handleInspectPrescription = (rx: Prescription) => {
     setSelectedPrescriptionForView(rx);
     setActiveTab('history');
   };
+
+  const handleSelectRx = (rx: Prescription) => {
+    setSelectedRx(rx);
+    setFrameName(rx.frameName || '');
+    setLensType(rx.lensType || '');
+    setOrderPrice(rx.orderPrice || '');
+    setOrderStatus(rx.orderStatus || 'Pending');
+  };
+
+  const handleSaveOrder = async () => {
+    if (!selectedRx) return;
+    setIsUpdatingOrder(true);
+
+    const updatedData = {
+      frameName: frameName.trim(),
+      lensType: lensType.trim(),
+      orderStatus: orderStatus,
+      orderPrice: orderPrice.trim(),
+      isNotified: selectedRx.orderStatus === orderStatus ? (selectedRx.isNotified || false) : false
+    };
+
+    if (isDemoMode) {
+      const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
+      const list = JSON.parse(stored) as Prescription[];
+      const updatedList = list.map(rx => {
+        if (rx.prescriptionId === selectedRx.prescriptionId) {
+          return { ...rx, ...updatedData };
+        }
+        return rx;
+      });
+      localStorage.setItem('hb_demo_prescriptions', JSON.stringify(updatedList));
+      
+      const newSelected = { ...selectedRx, ...updatedData };
+      setSelectedRx(newSelected);
+      setAllPrescriptions(updatedList);
+      setRecentPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? newSelected : p));
+      
+      alert(`Spectacle Order for ${selectedRx.patientName} saved! Status: ${orderStatus}.`);
+      setIsUpdatingOrder(false);
+    } else {
+      try {
+        const rxRef = doc(db, 'prescriptions', selectedRx.prescriptionId);
+        await updateDoc(rxRef, updatedData);
+        
+        const newSelected = { ...selectedRx, ...updatedData };
+        setSelectedRx(newSelected);
+        setAllPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? newSelected : p));
+        setRecentPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? newSelected : p));
+        
+        alert(`Spectacle Order for ${selectedRx.patientName} updated in clinical database!`);
+      } catch (err) {
+        console.error("Failed to update prescription order:", err);
+        alert("Failed to update order details.");
+      } finally {
+        setIsUpdatingOrder(false);
+      }
+    }
+  };
+
+  const handleSendOrderWhatsApp = () => {
+    if (!selectedRx) return;
+    const cleanPhone = selectedRx.mobile.replace(/\D/g, '');
+    const targetPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+    
+    const msg = [
+      `🏥 *Himabindhu Eye Testing & Opticals*`,
+      `📍 Dharmavaram, Andhra Pradesh | 📞 9949334443`,
+      ``,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `👓 *SPECTACLE ORDER CONFIRMATION*`,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      ``,
+      `👤 *Patient:* ${selectedRx.patientName}`,
+      `🆔 *Patient ID:* ${selectedRx.patientId}`,
+      `🔖 *Rx ID:* ${selectedRx.prescriptionId}`,
+      ``,
+      `✨ *ORDER DETAILS:*`,
+      `📦 *Frame Selected:* ${frameName || '—'}`,
+      `🔮 *Lens Type:* ${lensType || '—'}`,
+      orderPrice ? `💵 *Amount:* ₹${orderPrice}` : null,
+      `📊 *Status:* 🔴 Crafting in Progress (Pending)`,
+      ``,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `_We have started preparing your custom spectacles in our lab. We will notify you once they are ready for collection! Thank you! 🙏_`
+    ].filter(v => v !== null).join('\n');
+    
+    const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleNotifyCollectionWhatsApp = async () => {
+    if (!selectedRx) return;
+    const cleanPhone = selectedRx.mobile.replace(/\D/g, '');
+    const targetPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+    
+    const msg = [
+      `🏥 *Himabindhu Eye Testing & Opticals*`,
+      `📍 Dharmavaram, Andhra Pradesh | 📞 9949334443`,
+      ``,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `🎉 *SPECTACLES READY FOR COLLECTION*`,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      ``,
+      `Dear *${selectedRx.patientName}*,`,
+      `Your custom spectacles are fully crafted and ready for collection! 🥳`,
+      ``,
+      `✨ *DETAILS:*`,
+      `📦 *Frame:* ${frameName || selectedRx.frameName || '—'}`,
+      `🔮 *Lens:* ${lensType || selectedRx.lensType || '—'}`,
+      `🟢 *Status:* READY TO COLLECT`,
+      ``,
+      `📍 *Collection Point:* Himabindhu Opticals, Dharmavaram`,
+      `📞 *Helpline:* 9949334443`,
+      ``,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `_Please visit our clinic during working hours to collect your new spectacles. Thank you! 🙏_`
+    ].join('\n');
+    
+    const updatedData = { isNotified: true };
+    if (isDemoMode) {
+      const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
+      const list = JSON.parse(stored) as Prescription[];
+      const updatedList = list.map(rx => {
+        if (rx.prescriptionId === selectedRx.prescriptionId) {
+          return { ...rx, ...updatedData };
+        }
+        return rx;
+      });
+      localStorage.setItem('hb_demo_prescriptions', JSON.stringify(updatedList));
+      setSelectedRx(prev => prev ? { ...prev, ...updatedData } : null);
+      setAllPrescriptions(updatedList);
+    } else {
+      try {
+        const rxRef = doc(db, 'prescriptions', selectedRx.prescriptionId);
+        await updateDoc(rxRef, updatedData);
+        setSelectedRx(prev => prev ? { ...prev, ...updatedData } : null);
+        setAllPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? { ...p, ...updatedData } : p));
+      } catch (err) {
+        console.error("Failed to update notified status:", err);
+      }
+    }
+    
+    const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+  };
+
+  if (userProfile?.role === 'receptionist') {
+    const filteredRx = allPrescriptions.filter(rx => 
+      rx.patientName.toLowerCase().includes(receptionSearch.toLowerCase()) ||
+      rx.prescriptionId.toLowerCase().includes(receptionSearch.toLowerCase()) ||
+      rx.mobile.includes(receptionSearch)
+    );
+
+    return (
+      <div className="space-y-6 font-sans pt-6 pb-10 animate-fade-in" id="receptionist-dashboard-root">
+        {/* Header Info Banner */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-slate-900 text-white rounded-2xl gap-3 shadow-md border border-slate-800">
+          <div className="flex items-center gap-3 pl-1">
+            <Building2 className="w-5 h-5 text-teal-400" />
+            <div>
+              <span className="font-extrabold uppercase tracking-widest text-xs text-teal-400">Welcome Desk</span>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Order Management & Dispatch Console</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-bold text-slate-350">Logged in as: <span className="text-white capitalize">{userProfile?.name}</span></p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Left Panel: Prescription/Patient Queue */}
+          <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+            <div className="p-5 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <Users className="w-5 h-5 text-teal-400" />
+                <h3 className="font-extrabold text-sm uppercase tracking-wider text-white">Patient Queue</h3>
+              </div>
+              
+              <div className="relative shrink-0 max-w-xs w-full">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                  <Search className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search Patient Name, ID or Mobile..."
+                  value={receptionSearch}
+                  onChange={(e) => setReceptionSearch(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 focus:bg-white text-slate-300 focus:text-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs font-bold focus:outline-hidden transition"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto max-h-[550px] divide-y divide-slate-100 min-h-[300px]">
+              {loading ? (
+                <div className="p-16 text-center text-slate-400 font-bold flex flex-col items-center justify-center">
+                  <div className="w-8 h-8 animate-spin border-4 border-teal-500 border-t-transparent rounded-full mb-3"></div>
+                  <p className="text-xs uppercase tracking-wider">Syncing queue records...</p>
+                </div>
+              ) : filteredRx.length === 0 ? (
+                <div className="p-16 text-center text-slate-450 font-semibold">
+                  <p className="text-xs uppercase tracking-wider">No matching registers found</p>
+                  <p className="text-[11px] text-slate-400 mt-1 italic font-normal">Check search spelling or add patient in clinical portal.</p>
+                </div>
+              ) : (
+                filteredRx.map((rx) => {
+                  const isSelected = selectedRx?.prescriptionId === rx.prescriptionId;
+                  const hasDetails = rx.frameName || rx.lensType;
+                  return (
+                    <div
+                      key={rx.prescriptionId}
+                      onClick={() => handleSelectRx(rx)}
+                      className={`p-4 transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        isSelected ? 'bg-teal-50/45 border-l-4 border-teal-600' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-slate-900 text-xs">{rx.patientName}</span>
+                          <span className="text-[9px] bg-slate-100 text-slate-600 font-mono px-1.5 py-0.5 rounded font-bold uppercase">
+                            {rx.prescriptionId}
+                          </span>
+                        </div>
+                        <p className="text-[10.5px] text-slate-500 font-medium">
+                          Mobile: <strong className="text-slate-600 font-semibold">{rx.mobile}</strong> | Age: {rx.age} Yrs ({rx.gender})
+                        </p>
+                        {hasDetails && (
+                          <p className="text-[10px] text-slate-450 mt-0.5">
+                            Specs: <span className="font-bold text-slate-600">{rx.frameName}</span> ({rx.lensType})
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 self-start sm:self-auto">
+                        {hasDetails ? (
+                          rx.orderStatus === 'Ready' ? (
+                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[9.5px] font-black uppercase tracking-wider">
+                              🟢 Ready
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[9.5px] font-black uppercase tracking-wider">
+                              🔴 Crafting
+                            </span>
+                          )
+                        ) : (
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-md text-[9.5px] font-black uppercase tracking-wider">
+                            ⚪ Setup Order
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Right Panel: Order Setup & Actions */}
+          <div className="lg:col-span-5 space-y-6">
+            {selectedRx ? (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-6">
+                <div>
+                  <span className="text-[9px] font-black text-teal-600 uppercase tracking-widest font-mono block">
+                    Spectacle Customizer Desk
+                  </span>
+                  <h3 className="text-base font-extrabold text-slate-900 mt-0.5">
+                    Order Details for {selectedRx.patientName}
+                  </h3>
+                  <p className="text-[10.5px] text-slate-400 font-mono mt-1 leading-none">
+                    Patient ID: {selectedRx.patientId} | Rx ID: {selectedRx.prescriptionId}
+                  </p>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-slate-100">
+                  {/* Select Frame */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      Select Spectacle Frame
+                    </label>
+                    <select
+                      value={frameName}
+                      onChange={(e) => setFrameName(e.target.value)}
+                      className="w-full border border-slate-200 bg-slate-50/50 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:bg-white transition"
+                    >
+                      <option value="">-- Choose Frame Model --</option>
+                      <option value="Onyx Steel Rectangle">Onyx Steel Rectangle (Rectangle)</option>
+                      <option value="Matte Wayfarer Rectangle">Matte Wayfarer Rectangle (Rectangle)</option>
+                      <option value="Crystal Clear Round">Crystal Clear Round (Round)</option>
+                      <option value="Rose Gold Wire Round">Rose Gold Wire Round (Round)</option>
+                      <option value="Vintage Tortoise Cat-Eye">Vintage Tortoise Cat-Eye (Cat-Eye)</option>
+                      <option value="Midnight Velvet Cat-Eye">Midnight Velvet Cat-Eye (Cat-Eye)</option>
+                      <option value="Executive Browline">Executive Browline (Browline)</option>
+                      <option value="Havana Amber Oval">Havana Amber Oval (Oval)</option>
+                      <option value="Silver Whisper Oval">Silver Whisper Oval (Oval)</option>
+                      <option value="Onyx Bold Square">Onyx Bold Square (Square)</option>
+                      <option value="Classic Ebony Clubmaster">Classic Ebony Clubmaster (Clubmaster)</option>
+                      <option value="Hexa-Bronze Geometric">Hexa-Bronze Geometric (Geometric)</option>
+                      <option value="Maverick Gold Aviator">Maverick Gold Aviator (Aviator)</option>
+                      {selectedRx.frameName && !frameName && (
+                        <option value={selectedRx.frameName}>{selectedRx.frameName}</option>
+                      )}
+                    </select>
+
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        placeholder="Or type custom frame name..."
+                        value={frameName}
+                        onChange={(e) => setFrameName(e.target.value)}
+                        className="w-full border border-slate-200 bg-slate-50/50 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-teal-500 focus:bg-white transition"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Select Lens */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      Select Lens Type
+                    </label>
+                    <select
+                      value={lensType}
+                      onChange={(e) => setLensType(e.target.value)}
+                      className="w-full border border-slate-200 bg-slate-50/50 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:bg-white transition"
+                    >
+                      <option value="">-- Choose Lens Type --</option>
+                      <option value="Single Vision">Single Vision</option>
+                      <option value="Bifocal">Bifocal</option>
+                      <option value="Progressive">Progressive</option>
+                      <option value="Blue Cut">Blue Cut</option>
+                      <option value="Blue Light Transitions">Blue Light Transitions</option>
+                      <option value="Anti-glare HMC">Anti-glare HMC</option>
+                      <option value="Hard Coat (HC)">Hard Coat (HC)</option>
+                      {selectedRx.lensType && !lensType && (
+                        <option value={selectedRx.lensType}>{selectedRx.lensType}</option>
+                      )}
+                    </select>
+                    
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        placeholder="Or type custom lens details..."
+                        value={lensType}
+                        onChange={(e) => setLensType(e.target.value)}
+                        className="w-full border border-slate-200 bg-slate-50/50 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-teal-500 focus:bg-white transition"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Price */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      Order Price (INR)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">
+                        ₹
+                      </span>
+                      <input
+                        type="number"
+                        placeholder="e.g. 1500"
+                        value={orderPrice}
+                        onChange={(e) => setOrderPrice(e.target.value)}
+                        className="w-full border border-slate-200 bg-slate-50/50 rounded-xl pl-8 pr-4 py-2.5 text-xs font-extrabold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:bg-white transition"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Order Status Toggle */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                      Order Crafting Status
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setOrderStatus('Pending')}
+                        className={`p-3 rounded-xl border text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer transition ${
+                          orderStatus === 'Pending' 
+                            ? 'bg-amber-50 border-amber-500 text-amber-800 shadow-xs' 
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className={`w-2.5 h-2.5 rounded-full ${orderStatus === 'Pending' ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                        <span>Pending</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setOrderStatus('Ready')}
+                        className={`p-3 rounded-xl border text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer transition ${
+                          orderStatus === 'Ready' 
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-xs' 
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className={`w-2.5 h-2.5 rounded-full ${orderStatus === 'Ready' ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`}></span>
+                        <span>Ready</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submission & Action Buttons */}
+                <div className="pt-6 border-t border-slate-100 space-y-3">
+                  <button
+                    type="button"
+                    onClick={handleSaveOrder}
+                    disabled={isUpdatingOrder}
+                    className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-sm transition cursor-pointer"
+                  >
+                    <Save className="w-4.5 h-4.5" />
+                    <span>{isUpdatingOrder ? "Updating Order..." : "Confirm & Save Order Details"}</span>
+                  </button>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSendOrderWhatsApp}
+                      className="py-2.5 bg-slate-900 hover:bg-slate-850 text-white border border-slate-800 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition cursor-pointer"
+                      title="Send Order details to patient"
+                    >
+                      <MessageCircle className="w-4 h-4 text-emerald-450" />
+                      <span>Send Order details</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleNotifyCollectionWhatsApp}
+                      disabled={orderStatus !== 'Ready'}
+                      className={`py-2.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition cursor-pointer ${
+                        orderStatus === 'Ready'
+                          ? 'bg-[#25D366] hover:bg-[#20b858] text-white shadow-sm'
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed border-none'
+                      }`}
+                      title={orderStatus === 'Ready' ? "Notify patient spectacles are ready" : "Set status to Ready to enable notifications"}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      <span>{selectedRx.isNotified ? "Notified (Resend)" : "Notify ready"}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center text-slate-450 font-bold flex flex-col items-center justify-center h-full min-h-[300px]">
+                <Glasses className="w-12 h-12 text-slate-300 mb-4 animate-bounce" />
+                <p className="text-xs uppercase tracking-wider">No Patient Selected</p>
+                <p className="text-[11px] text-slate-400 mt-1 font-normal max-w-[200px]">
+                  Select a patient record from the queue to manage their spectacles and lens configurations.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 font-sans pt-6 pb-10" id="main-dashboard-root">

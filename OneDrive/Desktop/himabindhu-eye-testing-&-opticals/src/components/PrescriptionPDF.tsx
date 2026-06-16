@@ -214,6 +214,11 @@ export interface Prescription {
   advice: string[];
   notes: string;
   createdAt?: any;
+  frameName?: string;
+  lensType?: string;
+  orderStatus?: 'Pending' | 'Ready';
+  orderPrice?: string;
+  isNotified?: boolean;
 }
 
 interface PrescriptionPDFProps {

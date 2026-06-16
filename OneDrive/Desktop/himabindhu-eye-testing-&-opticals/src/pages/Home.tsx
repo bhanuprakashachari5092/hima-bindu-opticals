@@ -505,7 +505,37 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
                 </div>
 
                 {selectedRx && (
-                  <div className="pt-6 border-t border-slate-150">
+                  <div className="pt-6 border-t border-slate-150 space-y-4">
+                    {/* Spectacles Order Status Card */}
+                    {(selectedRx.frameName || selectedRx.lensType) && (
+                      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest font-mono">
+                            Spectacles Order Status
+                          </span>
+                          <h4 className="text-sm font-bold text-slate-800">
+                            Frame: <span className="text-slate-950 font-extrabold">{selectedRx.frameName || 'Not Selected'}</span>
+                          </h4>
+                          <p className="text-[11px] text-slate-500 font-semibold">
+                            Lens: <span className="text-slate-700 font-bold">{selectedRx.lensType || 'Not Selected'}</span>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {selectedRx.orderStatus === 'Ready' ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-250 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-emerald-50">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                              Ready for Collection
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-250 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-amber-50">
+                              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                              Crafting in Progress
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <h5 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider mb-4">Official Diagnostic Prescription</h5>
                     <div className="bg-slate-50 border border-slate-200 rounded-3xl p-2 md:p-4 shadow-inner overflow-hidden">
                       <PrescriptionPDFViewerPanel prescription={selectedRx} />
