@@ -631,6 +631,16 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
       `_Thank you for visiting Himabindhu Opticals! 🙏_`,
     ].filter(v => v !== null).join('\n');
 
+    if ((window as any).require) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        ipcRenderer.send('send-whatsapp-automated', { phone: targetPhone, text: msg });
+        return;
+      } catch (err) {
+        console.error("Failed to send via Electron IPC automation, falling back to browser tab:", err);
+      }
+    }
+
     const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
   };
