@@ -57,7 +57,20 @@ function TerminalConsole() {
       );
     }
     if (selectedFrameType) {
-      return <FrameCollection frameTypeId={selectedFrameType} onBack={() => setSelectedFrameType(null)} />;
+      return (
+        <FrameCollection 
+          frameTypeId={selectedFrameType} 
+          onBack={() => {
+            setSelectedFrameType(null);
+            setTimeout(() => {
+              const el = document.getElementById('designer-frames');
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }, 100);
+          }} 
+        />
+      );
     }
     return <Home onNavigateToLogin={() => setShowLoginGate(true)} onSelectFrameType={(id: string) => setSelectedFrameType(id)} />;
   }

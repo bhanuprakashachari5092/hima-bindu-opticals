@@ -819,7 +819,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       </section>
 
       {/* Luxury Frame Styles Showcase */}
-      <section className="bg-slate-950 text-white py-24 px-6 relative overflow-hidden">
+      <section id="designer-frames" className="bg-slate-950 text-white py-24 px-6 relative overflow-hidden">
         {/* Ambient glow */}
         <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-amber-600/5 rounded-full filter blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-slate-700/20 rounded-full filter blur-3xl pointer-events-none" />
