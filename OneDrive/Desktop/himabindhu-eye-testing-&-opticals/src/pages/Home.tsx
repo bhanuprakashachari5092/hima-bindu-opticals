@@ -162,6 +162,59 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
   const [clinicStatus, setClinicStatus] = useState<'open' | 'half-day' | 'closed'>('open');
   const [customNotice, setCustomNotice] = useState('');
 
+  // Dynamic live clock for automatic status updates
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 20000); // Check every 20 seconds
+    return () => clearInterval(timer);
+  }, []);
+
+  // Dynamic override: automatically show Closed outside morning/evening sessions
+  const activeDisplayStatus = React.useMemo(() => {
+    if (clinicStatus === 'closed') return 'closed';
+    
+    const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+    
+    const parseTimeToMinutes = (timeStr: string): number | null => {
+      const clean = timeStr.toLowerCase().replace(/\s+/g, '');
+      const match = clean.match(/^(\d+)(?::(\d+))?([ap]\.?m\.?)?$/);
+      if (!match) return null;
+      let hours = parseInt(match[1], 10);
+      const minutes = match[2] ? parseInt(match[2], 10) : 0;
+      const ampm = match[3];
+      if (ampm) {
+        const isPm = ampm.includes('p');
+        if (isPm && hours < 12) hours += 12;
+        if (!isPm && hours === 12) hours = 0;
+      }
+      return hours * 60 + minutes;
+    };
+
+    const isTimeInRange = (currentMinutes: number, rangeStr: string): boolean => {
+      const parts = rangeStr.split(/to|-/i);
+      if (parts.length !== 2) return false;
+      const start = parseTimeToMinutes(parts[0].trim());
+      const end = parseTimeToMinutes(parts[1].trim());
+      if (start === null || end === null) return false;
+      if (start <= end) {
+        return currentMinutes >= start && currentMinutes <= end;
+      } else {
+        return currentMinutes >= start || currentMinutes <= end;
+      }
+    };
+
+    const inMorning = isTimeInRange(currentMinutes, morningHours);
+    const inEvening = isTimeInRange(currentMinutes, eveningHours);
+
+    if (!inMorning && !inEvening) {
+      return 'closed';
+    }
+    return clinicStatus;
+  }, [clinicStatus, morningHours, eveningHours, currentTime]);
+
   const loadClinicSchedule = () => {
     const saved = localStorage.getItem('hb_clinic_schedule');
     if (saved) {
@@ -874,27 +927,29 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
           
           {/* DYNAMIC CLINIC STATUS INDICATOR */}
           <div className={`p-4.5 rounded-2xl border flex flex-col gap-2.5 transition-all duration-300 ${
-            clinicStatus === 'open' 
+            activeDisplayStatus === 'open' 
               ? 'bg-emerald-50/60 border-emerald-200 text-emerald-800' 
-              : clinicStatus === 'half-day'
+              : activeDisplayStatus === 'half-day'
               ? 'bg-amber-50/60 border-amber-200 text-amber-800'
               : 'bg-rose-50/60 border-rose-200 text-rose-800'
           }`}>
             <div className="flex items-center gap-2.5">
               <span className={`w-3 h-3 rounded-full shrink-0 ${
-                clinicStatus === 'open' 
+                activeDisplayStatus === 'open' 
                   ? 'bg-emerald-500 animate-pulse' 
-                  : clinicStatus === 'half-day'
+                  : activeDisplayStatus === 'half-day'
                   ? 'bg-amber-500'
                   : 'bg-rose-500'
               }`} />
               <p className="font-extrabold text-xs uppercase tracking-wider">
                 Clinic Status: {
-                  clinicStatus === 'open' 
+                  activeDisplayStatus === 'open' 
                     ? 'Fully Open (Active)' 
-                    : clinicStatus === 'half-day'
+                    : activeDisplayStatus === 'half-day'
                     ? 'Half Working Day'
-                    : 'Holiday / Closed Today'
+                    : clinicStatus === 'closed'
+                    ? 'Holiday / Closed Today'
+                    : 'Closed Now (Outside Timings)'
                 }
               </p>
             </div>
@@ -905,11 +960,13 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
               </p>
             ) : (
               <p className="text-[11px] font-medium leading-relaxed border-t pt-2 border-current/10 opacity-85">
-                {clinicStatus === 'open' 
+                {activeDisplayStatus === 'open' 
                   ? 'Visit during scheduled morning or evening slots. Standard consultation is active.' 
-                  : clinicStatus === 'half-day'
+                  : activeDisplayStatus === 'half-day'
                   ? 'Please note that the clinic runs for a limited duration today.'
-                  : 'Clinic operations are suspended. Standard diagnostics resume tomorrow.'}
+                  : clinicStatus === 'closed'
+                  ? 'Clinic operations are suspended. Standard diagnostics resume tomorrow.'
+                  : 'Clinic is currently closed outside of scheduled consulting hours.'}
               </p>
             )}
           </div>
