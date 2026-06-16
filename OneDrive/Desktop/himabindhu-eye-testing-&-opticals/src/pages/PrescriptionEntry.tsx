@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { doc, setDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../config/firebase';
 import { Prescription, EyePower, printPrescriptionHTML, PrescriptionPDFDocument } from '../components/PrescriptionPDF';
 import { PDFDownloadLink } from '@react-pdf/renderer';
@@ -29,6 +29,103 @@ interface Patient {
   age: number;
   gender: string;
   date: string;
+}
+
+interface SearchableSelectProps {
+  value: string;
+  onChange: (val: string) => void;
+  options: string[];
+  placeholder?: string;
+  label: string;
+  id?: string;
+  renderOption?: (opt: string) => string;
+}
+
+function SearchableSelect({ value, onChange, options, placeholder = "—", label, id, renderOption }: SearchableSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const displayVal = (val: string) => {
+    if (renderOption) return renderOption(val);
+    return val || '—';
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSearch(displayVal(value) === '—' ? '' : displayVal(value));
+    }
+  }, [value, isOpen]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filtered = options.filter(opt => {
+    const displayOpt = displayVal(opt);
+    if (!search || search === displayVal(value)) return true;
+    return displayOpt.toLowerCase().includes(search.toLowerCase()) || opt.toLowerCase().includes(search.toLowerCase());
+  });
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <label className="block text-[10px] text-gray-500 mb-1 font-semibold">{label}</label>
+      <input
+        type="text"
+        id={id}
+        value={search}
+        onChange={(e) => {
+          setSearch(e.target.value);
+          const matched = options.find(o => o.toLowerCase() === e.target.value.toLowerCase() || displayVal(o).toLowerCase() === e.target.value.toLowerCase());
+          if (matched !== undefined) {
+            onChange(matched);
+          } else {
+            onChange(e.target.value);
+          }
+          setIsOpen(true);
+        }}
+        onFocus={(e) => {
+          setIsOpen(true);
+          e.target.select();
+        }}
+        onClick={() => setIsOpen(true)}
+        placeholder={placeholder}
+        className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5 focus:border-amber-600 focus:outline-hidden focus:ring-1 focus:ring-amber-500/20"
+      />
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
+          {filtered.length === 0 ? (
+            <div className="p-2 text-xs text-gray-400 font-sans">No matches</div>
+          ) : (
+            <div className="grid grid-cols-2 gap-0.5 p-1 bg-gray-50">
+              {filtered.map((opt, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt);
+                    setSearch(displayVal(opt) === '—' ? '' : displayVal(opt));
+                    setIsOpen(false);
+                  }}
+                  className={`px-2 py-1 text-left text-xs font-mono rounded-md hover:bg-amber-50 hover:text-amber-900 ${
+                    value === opt ? 'bg-amber-600 text-white font-bold' : 'text-gray-700'
+                  }`}
+                >
+                  {displayVal(opt)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface PrescriptionEntryProps {
@@ -92,6 +189,11 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
 
   // Advice options
   const adviceList = [
+    "MR8",
+    "dual corth",
+    "Marry blue",
+    "Blue light PG - progressive",
+    "Blue light KT - progressive",
     "Blue Light",
     "Blue Cut",
     "CR PG HC",
@@ -105,16 +207,25 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
   ];
 
   // Prefill common optometry drop-down selectors
-  const sphOptions = [
-    "", "0.00", "-0.25", "+0.25", "-0.50", "+0.50", "-0.75", "+0.75", "-1.00", "+1.00",
-    "-1.25", "+1.25", "-1.50", "+1.50", "-1.75", "+1.75", "-2.00", "+2.00", "-2.25", "+2.25",
-    "-2.50", "+2.50", "-2.75", "+2.75", "-3.00", "+3.00", "-3.50", "+3.50", "-4.00", "+4.00"
-  ];
+  const generateSphOptions = () => {
+    const options = ["", "0.00"];
+    for (let i = 0.25; i <= 20.00; i += 0.25) {
+      const val = i.toFixed(2);
+      options.push(`-${val}`, `+${val}`);
+    }
+    return options;
+  };
+  const sphOptions = generateSphOptions();
 
-  const cylOptions = [
-    "", "0.00", "-0.25", "+0.25", "-0.50", "+0.50", "-0.75", "+0.75", "-1.00", "+1.00",
-    "-1.25", "+1.25", "-1.50", "+1.50", "-1.75", "+1.75", "-2.00", "+2.00"
-  ];
+  const generateCylOptions = () => {
+    const options = ["", "0.00"];
+    for (let i = 0.25; i <= 20.00; i += 0.25) {
+      const val = i.toFixed(2);
+      options.push(`-${val}`, `+${val}`);
+    }
+    return options;
+  };
+  const cylOptions = generateCylOptions();
 
   const axisOptions = [
     "", "0", "5", "10", "15", "20", "30", "45", "60", "75", "90", "105", "115", "120", "135", "150", "165", "180"
@@ -172,6 +283,60 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
     fetchRxSequenceId();
   }, [isDemoMode]);
 
+  const prefillPrescriptionPowers = (rx: Prescription) => {
+    setReSphDist(rx.rightEyeData.distance.sph || '');
+    setReCylDist(rx.rightEyeData.distance.cyl || '');
+    setReAxisDist(rx.rightEyeData.distance.axis || '');
+    setReVisionDist(rx.rightEyeData.distance.vision || '');
+
+    setReSphNear(rx.rightEyeData.near.sph || '');
+    setReCylNear(rx.rightEyeData.near.cyl || '');
+    setReAxisNear(rx.rightEyeData.near.axis || '');
+    setReVisionNear(rx.rightEyeData.near.vision || '');
+    setReAdd(rx.rightEyeData.add || '');
+
+    setLeSphDist(rx.leftEyeData.distance.sph || '');
+    setLeCylDist(rx.leftEyeData.distance.cyl || '');
+    setLeAxisDist(rx.leftEyeData.distance.axis || '');
+    setLeVisionDist(rx.leftEyeData.distance.vision || '');
+
+    setLeSphNear(rx.leftEyeData.near.sph || '');
+    setLeCylNear(rx.leftEyeData.near.cyl || '');
+    setLeAxisNear(rx.leftEyeData.near.axis || '');
+    setLeVisionNear(rx.leftEyeData.near.vision || '');
+    setLeAdd(rx.leftEyeData.add || '');
+
+    setPd(rx.pd || '');
+    setNotes(rx.notes || '');
+    setSelectedAdvice(rx.advice || []);
+  };
+
+  const loadLatestPrescription = async (patId: string) => {
+    try {
+      if (isDemoMode) {
+        const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
+        const rxList = JSON.parse(stored) as Prescription[];
+        const patientRx = rxList.filter(r => r.patientId === patId);
+        if (patientRx.length > 0) {
+          patientRx.sort((a, b) => b.prescriptionId.localeCompare(a.prescriptionId));
+          prefillPrescriptionPowers(patientRx[0]);
+        }
+        return;
+      }
+
+      // Live Firestore fetch
+      const prescriptionsRef = collection(db, 'prescriptions');
+      const q = query(prescriptionsRef, where('patientId', '==', patId), orderBy('prescriptionId', 'desc'), limit(1));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const latest = snap.docs[0].data() as Prescription;
+        prefillPrescriptionPowers(latest);
+      }
+    } catch (err) {
+      console.error("Failed loading latest patient prescription:", err);
+    }
+  };
+
   const applySelectedPatient = (p: Patient) => {
     setPatientId(p.patientId);
     setPatientName(p.name);
@@ -180,6 +345,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
     setGender(p.gender);
     setSearchQuery(`${p.name} (${p.patientId})`);
     setShowDropdown(false);
+    loadLatestPrescription(p.patientId);
   };
 
   const handleToggleAdvice = (item: string) => {
@@ -349,18 +515,60 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
           notes: finalRx.notes
         };
 
-        fetch("https://script.google.com/macros/s/AKfycbwmFPrQ7XKDNhpr3p1d0D0OImkd8DlNvhnxmSzNtPMKKmSw81xInATraKA2C7gV6kaW/exec", {
-          method: "POST",
-          mode: "no-cors",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(flatData)
-        }).then(() => {
-          console.log("Successfully posted prescription record to Google Sheets webhook.");
-        }).catch(err => {
-          console.error("Google Sheets webhook call failed:", err);
-        });
+        const gsheetsUrl = "https://script.google.com/macros/s/AKfycbwmFPrQ7XKDNhpr3p1d0D0OImkd8DlNvhnxmSzNtPMKKmSw81xInATraKA2C7gV6kaW/exec";
+
+        if ((window as any).require) {
+          try {
+            const https = (window as any).require('https');
+            const makeRequest = (targetUrl: string) => {
+              const parsedUrl = new URL(targetUrl);
+              const options = {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                }
+              };
+
+              const req = https.request(parsedUrl, options, (res: any) => {
+                if (res.statusCode === 301 || res.statusCode === 302) {
+                  makeRequest(res.headers.location);
+                  return;
+                }
+                console.log("Direct Node HTTPS post to GSheets success, status:", res.statusCode);
+              });
+
+              req.on('error', (e: any) => {
+                console.error("Direct Node HTTPS post to GSheets failed:", e);
+              });
+
+              req.write(JSON.stringify(flatData));
+              req.end();
+            };
+
+            makeRequest(gsheetsUrl);
+          } catch (electronErr) {
+            console.error("Failed doing Node HTTPS post to GSheets, falling back to fetch:", electronErr);
+            fetch(gsheetsUrl, {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(flatData)
+            });
+          }
+        } else {
+          fetch(gsheetsUrl, {
+            method: "POST",
+            mode: "no-cors",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(flatData)
+          }).then(() => {
+            console.log("Successfully posted prescription record to Google Sheets webhook.");
+          }).catch(err => {
+            console.error("Google Sheets webhook call failed:", err);
+          });
+        }
       } catch (sheetErr) {
         console.error("GSheet formatting error:", sheetErr);
       }
@@ -506,7 +714,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 
                 {/* 1. RIGHT EYE PANEL (OD) */}
-                <div className="p-4 bg-amber-50/20 border-1 border-amber-200 rounded-2xl relative overflow-hidden">
+                <div className="p-4 bg-amber-50/20 border-1 border-amber-200 rounded-2xl relative">
                   <svg className="w-16 h-16 text-amber-500/10 absolute -right-2 -top-2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
                     <circle cx="12" cy="12" r="3" />
@@ -522,112 +730,79 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
                   <div className="space-y-3.5">
                     <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Distance Vision parameters</p>
                     <div className="grid grid-cols-2 gap-3.5">
-                      <div>
-                        <label className="block text-[10px] text-gray-500 mb-1">Spherical (SPH)</label>
-                        <select
-                          value={reSphDist}
-                          onChange={(e) => setReSphDist(e.target.value)}
-                          className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                        >
-                          {sphOptions.map(o => <option key={o} value={o}>{o || '—'}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-gray-500 mb-1">Cylindrical (CYL)</label>
-                        <select
-                          value={reCylDist}
-                          onChange={(e) => setReCylDist(e.target.value)}
-                          className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                        >
-                          {cylOptions.map(o => <option key={o} value={o}>{o || '—'}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-gray-500 mb-1">Axis</label>
-                        <select
-                          value={reAxisDist}
-                          onChange={(e) => setReAxisDist(e.target.value)}
-                          className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                        >
-                          {axisOptions.map(o => <option key={o} value={o}>{o || '—'}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-gray-500 mb-1">Visual Acuity</label>
-                        <select
-                          value={reVisionDist}
-                          onChange={(e) => setReVisionDist(e.target.value)}
-                          className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                        >
-                          {acuityOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
-                      </div>
+                      <SearchableSelect
+                        label="Spherical (SPH)"
+                        value={reSphDist}
+                        onChange={setReSphDist}
+                        options={sphOptions}
+                      />
+                      <SearchableSelect
+                        label="Cylindrical (CYL)"
+                        value={reCylDist}
+                        onChange={setReCylDist}
+                        options={cylOptions}
+                      />
+                      <SearchableSelect
+                        label="Axis"
+                        value={reAxisDist}
+                        onChange={setReAxisDist}
+                        options={axisOptions}
+                      />
+                      <SearchableSelect
+                        label="Visual Acuity"
+                        value={reVisionDist}
+                        onChange={setReVisionDist}
+                        options={acuityOptions}
+                      />
                     </div>
 
                     {/* Near specs */}
                     <div className="border-t border-dashed border-gray-200 pt-3.5 mt-3.5 space-y-3.5">
                       <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Near Vision parameters</p>
                       <div className="grid grid-cols-2 gap-3.5">
-                        <div>
-                          <label className="block text-[10px] text-gray-500 mb-1">Spherical (SPH)</label>
-                          <select
-                            value={reSphNear}
-                            onChange={(e) => setReSphNear(e.target.value)}
-                            className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                          >
-                            {sphOptions.map(o => <option key={o} value={o}>{o || '—'}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[10px] text-gray-500 mb-1">Cylindrical (CYL)</label>
-                          <select
-                            value={reCylNear}
-                            onChange={(e) => setReCylNear(e.target.value)}
-                            className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                          >
-                            {cylOptions.map(o => <option key={o} value={o}>{o || '—'}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[10px] text-gray-500 mb-1">Axis</label>
-                          <select
-                            value={reAxisNear}
-                            onChange={(e) => setReAxisNear(e.target.value)}
-                            className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                          >
-                            {axisOptions.map(o => <option key={o} value={o}>{o || '—'}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[10px] text-gray-500 mb-1">Acuity (Near)</label>
-                          <select
-                            value={reVisionNear}
-                            onChange={(e) => setReVisionNear(e.target.value)}
-                            className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                          >
-                            {nearAcuityOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                          </select>
-                        </div>
+                        <SearchableSelect
+                          label="Spherical (SPH)"
+                          value={reSphNear}
+                          onChange={setReSphNear}
+                          options={sphOptions}
+                        />
+                        <SearchableSelect
+                          label="Cylindrical (CYL)"
+                          value={reCylNear}
+                          onChange={setReCylNear}
+                          options={cylOptions}
+                        />
+                        <SearchableSelect
+                          label="Axis"
+                          value={reAxisNear}
+                          onChange={setReAxisNear}
+                          options={axisOptions}
+                        />
+                        <SearchableSelect
+                          label="Acuity (Near)"
+                          value={reVisionNear}
+                          onChange={setReVisionNear}
+                          options={nearAcuityOptions}
+                        />
                       </div>
                     </div>
 
                     {/* Right Eye Add */}
                     <div className="border-t border-dashed border-gray-250 pt-3.5 mt-3.5 bg-amber-50/20 p-2.5 rounded-lg border border-amber-200">
-                      <label className="block text-[10px] font-bold text-slate-900 uppercase">ADD Power</label>
-                      <select
+                      <SearchableSelect
+                        label="ADD Power"
                         value={reAdd}
-                        onChange={(e) => setReAdd(e.target.value)}
-                        className="w-full text-xs font-mono font-bold mt-1.5 border border-gray-300 bg-white rounded-lg p-1.5"
-                      >
-                        {addOptions.map(o => <option key={o} value={o}>{o ? `+${o}` : '—'}</option>)}
-                      </select>
+                        onChange={setReAdd}
+                        options={addOptions}
+                        renderOption={(opt) => opt ? `+${opt}` : '—'}
+                      />
                     </div>
 
                   </div>
                 </div>
 
                 {/* 2. LEFT EYE PANEL (OS) */}
-                <div className="p-4 bg-indigo-50/20 border-1 border-indigo-100 rounded-2xl relative overflow-hidden">
+                <div className="p-4 bg-indigo-50/20 border-1 border-indigo-100 rounded-2xl relative">
                   <svg className="w-16 h-16 text-indigo-500/10 absolute -right-2 -top-2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
                     <circle cx="12" cy="12" r="3" />
@@ -643,105 +818,72 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
                   <div className="space-y-3.5">
                     <p className="text-[10px] uppercase font-bold text-gray-405 tracking-wider">Distance Vision parameters</p>
                     <div className="grid grid-cols-2 gap-3.5">
-                      <div>
-                        <label className="block text-[10px] text-gray-505 mb-1">Spherical (SPH)</label>
-                        <select
-                          value={leSphDist}
-                          onChange={(e) => setLeSphDist(e.target.value)}
-                          className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                        >
-                          {sphOptions.map(o => <option key={o} value={o}>{o || '—'}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-gray-505 mb-1">Cylindrical (CYL)</label>
-                        <select
-                          value={leCylDist}
-                          onChange={(e) => setLeCylDist(e.target.value)}
-                          className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                        >
-                          {cylOptions.map(o => <option key={o} value={o}>{o || '—'}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-gray-505 mb-1">Axis</label>
-                        <select
-                          value={leAxisDist}
-                          onChange={(e) => setLeAxisDist(e.target.value)}
-                          className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                        >
-                          {axisOptions.map(o => <option key={o} value={o}>{o || '—'}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-gray-505 mb-1">Visual Acuity</label>
-                        <select
-                          value={leVisionDist}
-                          onChange={(e) => setLeVisionDist(e.target.value)}
-                          className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                        >
-                          {acuityOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
-                      </div>
+                      <SearchableSelect
+                        label="Spherical (SPH)"
+                        value={leSphDist}
+                        onChange={setLeSphDist}
+                        options={sphOptions}
+                      />
+                      <SearchableSelect
+                        label="Cylindrical (CYL)"
+                        value={leCylDist}
+                        onChange={setLeCylDist}
+                        options={cylOptions}
+                      />
+                      <SearchableSelect
+                        label="Axis"
+                        value={leAxisDist}
+                        onChange={setLeAxisDist}
+                        options={axisOptions}
+                      />
+                      <SearchableSelect
+                        label="Visual Acuity"
+                        value={leVisionDist}
+                        onChange={setLeVisionDist}
+                        options={acuityOptions}
+                      />
                     </div>
 
                     {/* Near specs */}
                     <div className="border-t border-dashed border-gray-200 pt-3.5 mt-3.5 space-y-3.5">
                       <p className="text-[10px] uppercase font-bold text-gray-405 tracking-wider">Near Vision parameters</p>
                       <div className="grid grid-cols-2 gap-3.5">
-                        <div>
-                          <label className="block text-[10px] text-gray-505 mb-1">Spherical (SPH)</label>
-                          <select
-                            value={leSphNear}
-                            onChange={(e) => setLeSphNear(e.target.value)}
-                            className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                          >
-                            {sphOptions.map(o => <option key={o} value={o}>{o || '—'}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[10px] text-gray-505 mb-1">Cylindrical (CYL)</label>
-                          <select
-                            value={leCylNear}
-                            onChange={(e) => setLeCylNear(e.target.value)}
-                            className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                          >
-                            {cylOptions.map(o => <option key={o} value={o}>{o || '—'}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[10px] text-gray-505 mb-1">Axis</label>
-                          <select
-                            value={leAxisNear}
-                            onChange={(e) => setLeAxisNear(e.target.value)}
-                            className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                          >
-                            {axisOptions.map(o => <option key={o} value={o}>{o || '—'}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[10px] text-gray-505 mb-1">Acuity (Near)</label>
-                          <select
-                            value={leVisionNear}
-                            onChange={(e) => setLeVisionNear(e.target.value)}
-                            className="w-full text-xs font-mono border border-gray-300 bg-white rounded-lg p-1.5"
-                          >
-                            {nearAcuityOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                          </select>
-                        </div>
+                        <SearchableSelect
+                          label="Spherical (SPH)"
+                          value={leSphNear}
+                          onChange={setLeSphNear}
+                          options={sphOptions}
+                        />
+                        <SearchableSelect
+                          label="Cylindrical (CYL)"
+                          value={leCylNear}
+                          onChange={setLeCylNear}
+                          options={cylOptions}
+                        />
+                        <SearchableSelect
+                          label="Axis"
+                          value={leAxisNear}
+                          onChange={setLeAxisNear}
+                          options={axisOptions}
+                        />
+                        <SearchableSelect
+                          label="Acuity (Near)"
+                          value={leVisionNear}
+                          onChange={setLeVisionNear}
+                          options={nearAcuityOptions}
+                        />
                       </div>
                     </div>
 
                     {/* Left Eye Add */}
                     <div className="border-t border-dashed border-gray-250 pt-3.5 mt-3.5 bg-indigo-50/50 p-2.5 rounded-lg border border-indigo-105">
-                      <label className="block text-[10px] font-bold text-indigo-900 uppercase">ADD Power</label>
-                      <select
+                      <SearchableSelect
+                        label="ADD Power"
                         value={leAdd}
-                        onChange={(e) => setLeAdd(e.target.value)}
-                        className="w-full text-xs font-mono font-bold mt-1.5 border border-gray-300 bg-white rounded-lg p-1.5"
-                      >
-                        {addOptions.map(o => <option key={o} value={o}>{o ? `+${o}` : '—'}</option>)}
-                      </select>
+                        onChange={setLeAdd}
+                        options={addOptions}
+                        renderOption={(opt) => opt ? `+${opt}` : '—'}
+                      />
                     </div>
 
                   </div>
@@ -786,26 +928,29 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
                     Spectacle Ophthalmic Advice Checklist
                   </label>
-                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2 border rounded-xl p-3 bg-gray-50/10 border-gray-200">
+                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2 border rounded-xl p-3 bg-gray-50 border-gray-200">
                     {adviceList.map((advice) => {
                       const isChecked = selectedAdvice.includes(advice);
                       return (
-                        <label 
+                        <button 
                           key={advice}
-                          className={`flex items-center gap-2 p-2 rounded-lg border text-[10.5px] cursor-pointer select-none transition ${
+                          type="button"
+                          onClick={() => handleToggleAdvice(advice)}
+                          className={`flex items-center justify-between p-2.5 rounded-xl border text-[10.5px] font-bold text-left transition-all ${
                             isChecked 
-                              ? 'bg-amber-50/25 border-amber-200 text-slate-900 font-bold' 
-                              : 'bg-white border-gray-200 hover:bg-gray-50'
+                              ? 'bg-amber-600 border-amber-600 text-white shadow-xs' 
+                              : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                           }`}
                         >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => handleToggleAdvice(advice)}
-                            className="rounded text-slate-800 focus:ring-blue-100 h-3.5 w-3.5 border-gray-300 cursor-pointer"
-                          />
-                          <span>{advice}</span>
-                        </label>
+                          <span className="truncate">{advice}</span>
+                          <div className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center text-[9px] font-bold shrink-0 ml-1.5 transition-all ${
+                            isChecked 
+                              ? 'bg-white text-amber-600 border-white' 
+                              : 'border-gray-300 bg-white'
+                          }`}>
+                            {isChecked ? "✓" : ""}
+                          </div>
+                        </button>
                       );
                     })}
                   </div>

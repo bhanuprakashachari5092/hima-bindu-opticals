@@ -21,12 +21,107 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
+const frameCategories = [
+  {
+    id: 'rectangle',
+    name: 'Rectangle',
+    tagline: 'Structured, Bold & Professional',
+    description: 'Often wider with sharp angles, flattering on most face shapes.',
+    models: [
+      { name: 'Onyx Steel Rectangle', code: 'HB-RE-STEEL', price: '₹1,599', image: '/frames/rectangle.png', desc: 'Lightweight stainless steel frame in matte black.' },
+      { name: 'Matte Wayfarer Rectangle', code: 'HB-WF-MATTE', price: '₹1,299', image: '/frames/wayfarer.png', desc: 'Full-rim sturdy frame with smooth rubberized acetate.' }
+    ]
+  },
+  {
+    id: 'round',
+    name: 'Round',
+    tagline: 'Soft Curves & Vintage Intellect',
+    description: 'Soft curves that can soften angular features.',
+    models: [
+      { name: 'Crystal Clear Round', code: 'HB-RD-CLEAR', price: '₹1,499', image: '/frames/round.png', desc: 'Transparent high-quality acetate with visible wire cores.' },
+      { name: 'Rose Gold Wire Round', code: 'HB-RD-ROSE', price: '₹1,799', image: '/frames/round.png', desc: 'Chic ultra-thin metallic frames with soft adjustable nose pads.' }
+    ]
+  },
+  {
+    id: 'cateye',
+    name: 'Cat-Eye',
+    tagline: 'Retro Upswept Elegance',
+    description: 'Characterized by upswept outer edges, popular for a vintage look.',
+    models: [
+      { name: 'Vintage Tortoise Cat-Eye', code: 'HB-CE-TORTOISE', price: '₹1,899', image: '/frames/cateye.png', desc: 'Elegant upswept wings in classic amber-spotted tortoise shell.' },
+      { name: 'Midnight Velvet Cat-Eye', code: 'HB-CE-BLACK', price: '₹1,699', image: '/frames/cateye.png', desc: 'Sleek black high-gloss acetate cat-eye with gold hinge details.' }
+    ]
+  },
+  {
+    id: 'browline',
+    name: 'Browline',
+    tagline: 'Bold Top Frame Structure',
+    description: 'Features a bold upper frame, resembling eyebrows.',
+    models: [
+      { name: 'Executive Browline', code: 'HB-BL-EXEC', price: '₹2,199', image: '/frames/browline.png', desc: 'Heavy acetate upper arch with golden metal lower rim support.' },
+      { name: 'Slate Grey Semi-Rimless', code: 'HB-BL-SLATE', price: '₹1,999', image: '/frames/browline.png', desc: 'Modernized titanium browline with matte gunmetal accents.' }
+    ]
+  },
+  {
+    id: 'oval',
+    name: 'Oval',
+    tagline: 'Soft, Balanced & Elegant',
+    description: 'Soft, rounded shape that complements angular features.',
+    models: [
+      { name: 'Havana Amber Oval', code: 'HB-OV-AMBER', price: '₹1,599', image: '/frames/oval.png', desc: 'Polished acetate frame with soft fluid curves.' },
+      { name: 'Silver Whisper Oval', code: 'HB-OV-SILVER', price: '₹1,699', image: '/frames/oval.png', desc: 'Featherlight silver titanium frame with clear temple tips.' }
+    ]
+  },
+  {
+    id: 'square',
+    name: 'Square',
+    tagline: 'Sharp Angles & Distinct Definition',
+    description: 'Sharp angles that can balance rounder face shapes.',
+    models: [
+      { name: 'Onyx Bold Square', code: 'HB-SQ-ONYX', price: '₹1,799', image: '/frames/square.png', desc: 'Thick-profile square frames with a strong bridge architectural line.' },
+      { name: 'Crystal Ocean Square', code: 'HB-SQ-OCEAN', price: '₹1,699', image: '/frames/square.png', desc: 'Transparent deep-sea blue square acetate frame with silver core wire.' }
+    ]
+  },
+  {
+    id: 'clubmaster',
+    name: 'Clubmaster',
+    tagline: 'Vintage Revival & Iconic Styling',
+    description: 'A combination of browline and round styles, offering a retro vibe.',
+    models: [
+      { name: 'Classic Ebony Clubmaster', code: 'HB-CM-CLASSIC', price: '₹2,099', image: '/frames/clubmaster.png', desc: 'Timeless retro styling with black upper frame and gold wire rims.' },
+      { name: 'Tortoise Gold Clubmaster', code: 'HB-CM-GOLD', price: '₹2,299', image: '/frames/clubmaster.png', desc: 'Premium edition featuring rich amber tortoise shell and polished gold.' }
+    ]
+  },
+  {
+    id: 'geometric',
+    name: 'Geometric',
+    tagline: 'Modern Artistry & Hexagonal Lines',
+    description: 'Unique shapes that add a modern touch.',
+    models: [
+      { name: 'Hexa-Bronze Geometric', code: 'HB-GM-HEX', price: '₹1,999', image: '/frames/geometric.png', desc: 'Polygonal thin metal wireframe in a warm bronze finish.' },
+      { name: 'Octa-Crystal Geometric', code: 'HB-GM-OCTA', price: '₹1,899', image: '/frames/geometric.png', desc: 'Bold octagonal crystal-clear frame with rose-gold details.' }
+    ]
+  },
+  {
+    id: 'aviator',
+    name: 'Aviator',
+    tagline: 'Classic Teardrop Styling',
+    description: 'Teardrop shape, originally designed for pilots, now a fashion staple.',
+    models: [
+      { name: 'Maverick Gold Aviator', code: 'HB-AV-MAVERICK', price: '₹1,899', image: '/frames/aviator.png', desc: 'Thin double-bridge wireframe with iconic green-tint demo lenses.' },
+      { name: 'Stealth Black Aviator', code: 'HB-AV-STEALTH', price: '₹1,999', image: '/frames/aviator.png', desc: 'Matte black steel frame with matching black temple wraps.' }
+    ]
+  }
+];
+
 interface HomeProps {
   onNavigateToLogin: () => void;
+  onSelectFrameType: (id: string) => void;
 }
 
-export default function Home({ onNavigateToLogin }: HomeProps) {
+export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps) {
   const { isDemoMode, setDemoProfile } = useAuth();
+  const [activeCategory, setActiveCategory] = useState(frameCategories[0]);
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,10 +130,6 @@ export default function Home({ onNavigateToLogin }: HomeProps) {
   const [searched, setSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedRx, setSelectedRx] = useState<Prescription | null>(null);
-
-  // Doctor photos slideshow state
-  const doctorPhotos = ['/doctor_1.jpg', '/doctor_2.jpg'];
-  const [currentPhotoIdx, setCurrentPhotoIdx] = useState(0);
 
   // Clinic timing and status state
   const [morningHours, setMorningHours] = useState('9:00 a.m. to 2:00 p.m.');
@@ -62,15 +153,10 @@ export default function Home({ onNavigateToLogin }: HomeProps) {
   };
 
   React.useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentPhotoIdx((prev) => (prev === 0 ? 1 : 0));
-    }, 4000);
-    
     loadClinicSchedule();
     window.addEventListener('storage', loadClinicSchedule);
     
     return () => {
-      clearInterval(timer);
       window.removeEventListener('storage', loadClinicSchedule);
     };
   }, []);
@@ -435,21 +521,14 @@ export default function Home({ onNavigateToLogin }: HomeProps) {
       {/* Chief Optometrist & Clinical Director Profile Section */}
       <section className="bg-slate-50 py-20 px-6 border-t border-slate-150">
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
-          {/* Left Column: Photo Slideshow with Fade Effect */}
+          {/* Left Column: Bio Photo */}
           <div className="md:col-span-5 flex justify-center">
             <div className="w-full max-w-sm aspect-[4/3] sm:aspect-square md:h-[400px] overflow-hidden relative rounded-3xl shadow-xl shadow-slate-200 border-2 border-white bg-slate-100">
-              {doctorPhotos.map((photo, index) => (
-                <motion.img
-                  key={photo}
-                  src={photo}
-                  alt="M. Nagaraja Achari (Chief Optometrist)"
-                  className="absolute inset-0 w-full h-full object-cover"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: index === currentPhotoIdx ? 1 : 0 }}
-                  transition={{ duration: 1.2, ease: "easeInOut" }}
-                  style={{ zIndex: index === currentPhotoIdx ? 2 : 1 }}
-                />
-              ))}
+              <img
+                src="/doctor_1.jpg"
+                alt="M. Nagaraja Achari (Chief Optometrist)"
+                className="w-full h-full object-cover animate-fade-in"
+              />
             </div>
           </div>
 
@@ -525,6 +604,108 @@ export default function Home({ onNavigateToLogin }: HomeProps) {
               <p className="text-slate-550 text-xs leading-normal">Offering Blue Cut, Blue Light, Transitions, anti-glare HMC, and durable hard coats (HC).</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Luxury Frame Styles Showcase */}
+      <section className="bg-slate-950 text-white py-24 px-6 relative overflow-hidden">
+        {/* Ambient glow */}
+        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-amber-600/5 rounded-full filter blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-slate-700/20 rounded-full filter blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto space-y-14 relative z-10">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+            className="text-center space-y-4"
+          >
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-amber-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              Premium Eyewear Collection
+            </span>
+            <h3 className="text-4xl md:text-5xl font-black uppercase font-serif tracking-wider bg-gradient-to-r from-white via-amber-100 to-amber-300 bg-clip-text text-transparent">
+              Designer Frame Styles
+            </h3>
+            <p className="text-slate-400 text-sm max-w-2xl mx-auto leading-relaxed">
+              Discover our curated collection of international designer frames — crafted in premium titanium, gold-plated alloys, and hand-polished acetate.
+            </p>
+          </motion.div>
+
+          {/* Frames Grid */}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.07 } } }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-5"
+          >
+            {[
+              { id: 'rectangle', name: 'Rectangle Frames', tags: 'Modern • Professional • Everyday Wear', image: '/frames/rectangle.png' },
+              { id: 'round',     name: 'Round Frames',     tags: 'Classic • Vintage • Intellectual',      image: '/frames/round.png' },
+              { id: 'square',    name: 'Square Frames',    tags: 'Bold • Confident • Sharp',              image: '/frames/square.png' },
+              { id: 'cateye',    name: 'Cat-Eye Frames',   tags: 'Elegant • Fashion • Premium',           image: '/frames/cateye.png' },
+              { id: 'aviator',   name: 'Aviator Frames',   tags: 'Iconic • Stylish • Timeless',           image: '/frames/aviator.png' },
+              { id: 'geometric', name: 'Geometric Frames', tags: 'Trendy • Creative • Modern',            image: '/frames/geometric.png' },
+              { id: 'oversized', name: 'Oversized Frames', tags: 'Luxury • Statement • Fashion',          image: '/frames/oversized.png' },
+              { id: 'rimless',   name: 'Rimless Frames',   tags: 'Minimal • Lightweight • Executive',     image: '/frames/rimless.png' },
+            ].map((frame, idx) => (
+              <motion.div
+                key={idx}
+                variants={{
+                  hidden: { opacity: 0, y: 25 },
+                  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100, damping: 14 } }
+                }}
+                whileHover={{ y: -10, scale: 1.02, transition: { duration: 0.25 } }}
+                onClick={() => onSelectFrameType(frame.id)}
+                className="group relative rounded-3xl overflow-hidden border border-slate-800 hover:border-amber-500/60 transition-all duration-400 shadow-2xl cursor-pointer bg-slate-900"
+              >
+                {/* Single image — full bleed tall card */}
+                <div className="relative aspect-[3/4] w-full overflow-hidden bg-white rounded-2xl">
+                  {/* Bottom fade overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/10 to-transparent z-10 pointer-events-none" />
+                  {/* Gold top bar on hover */}
+                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500 to-transparent z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <img
+                    src={frame.image}
+                    alt={frame.name}
+                    className="w-full h-full object-contain p-3 transform group-hover:scale-110 group-hover:rotate-[-1deg] transition-transform duration-500"
+                  />
+                  {/* View Collection badge */}
+                  <div className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0">
+                    <span className="px-2.5 py-1 bg-amber-500 text-slate-950 text-[9px] font-black uppercase tracking-wider rounded-full shadow-lg">
+                      View All →
+                    </span>
+                  </div>
+                </div>
+
+                {/* Text Overlay */}
+                <div className="absolute bottom-0 left-0 right-0 z-20 p-4 space-y-1">
+                  <p className="text-[9px] font-bold text-amber-400 uppercase tracking-[0.18em] leading-none">
+                    {frame.tags}
+                  </p>
+                  <h4 className="text-sm font-black text-white uppercase tracking-widest leading-tight group-hover:text-amber-300 transition-colors duration-200">
+                    {frame.name}
+                  </h4>
+                  {/* Animated underline */}
+                  <div className="h-[1.5px] bg-gradient-to-r from-amber-500 to-transparent w-0 group-hover:w-full transition-all duration-400 rounded-full" />
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Bottom tagline */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+            className="text-center text-[11px] text-slate-500 uppercase tracking-[0.25em] font-semibold"
+          >
+            Visit our store to try on your perfect pair · Dharmavaram, Andhra Pradesh
+          </motion.p>
         </div>
       </section>
 

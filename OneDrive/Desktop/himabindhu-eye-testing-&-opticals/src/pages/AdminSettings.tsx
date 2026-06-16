@@ -748,12 +748,12 @@ export default function AdminSettings() {
         {loadingLogs ? (
           <div className="p-16 text-center text-slate-400 font-bold flex flex-col items-center justify-center">
             <Loader2 className="w-8 h-8 animate-spin text-teal-600 mb-3" />
-            <p className="text-xs uppercase tracking-wider">Loading receptionist login audit trail...</p>
+            <p className="text-xs uppercase tracking-wider">Loading login audit trail...</p>
           </div>
-        ) : loginLogs.filter(log => log.role === 'receptionist').length === 0 ? (
+        ) : loginLogs.length === 0 ? (
           <div className="p-16 text-center text-slate-450 font-bold">
-            <p className="text-xs uppercase tracking-wider">No receptionist login sessions recorded</p>
-            <p className="text-[11px] text-slate-400 mt-1 italic font-normal">Session logs will begin populating automatically as receptionists authenticate.</p>
+            <p className="text-xs uppercase tracking-wider">No login sessions recorded</p>
+            <p className="text-[11px] text-slate-400 mt-1 italic font-normal">Session logs will begin populating automatically as staff authenticate.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -770,7 +770,6 @@ export default function AdminSettings() {
               </thead>
               <tbody className="divide-y divide-slate-150 text-slate-700 font-semibold font-sans">
                 {loginLogs
-                  .filter(log => log.role === 'receptionist')
                   .map((log, index) => (
                     <tr key={log.loginTime + '_' + index} className="hover:bg-slate-50/50 transition">
                       <td className="py-4 px-6 text-slate-500 font-mono text-[11px]">

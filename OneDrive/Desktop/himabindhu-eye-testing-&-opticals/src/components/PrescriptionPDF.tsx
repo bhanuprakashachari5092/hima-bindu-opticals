@@ -413,11 +413,7 @@ export const PrescriptionPDFDocument = ({ prescription }: PrescriptionPDFProps) 
 
 // Perfectly Mimicked HTML letterhead directly in app - handles rendering safely even inside standard iframes
 export function printPrescriptionHTML(rx: Prescription) {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert("Please allow popups to print / generate prescription slips.");
-    return;
-  }
+
 
   // Map of 10 clinical advice labels to their visual elements
   const allAdviceItems = [
@@ -1067,6 +1063,7 @@ export function printPrescriptionHTML(rx: Prescription) {
             <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
               ${[
                 { label: 'Blue Light', icon: `<path d="M12 2L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-3z" />` },
+                { label: 'MR8', icon: `<circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" />` },
                 { label: 'CR KT HC', icon: `<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 12 10 12-4.48 12-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />` },
                 { label: 'CR KT HMC', icon: `<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 12 10 12-4.48 12-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />` },
                 { label: 'Contact Lens', icon: `<circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />` }
@@ -1088,6 +1085,7 @@ export function printPrescriptionHTML(rx: Prescription) {
             <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
               ${[
                 { label: 'Blue Cut', icon: `<path d="M21 5H3C1.9 5 1 5.9 1 7v1h22V7c0-1.1-.9-2-2-2zM21 16H3c-1.1 0-2-.9-2-2V9h22v5c0 1.1-.9 2-2 2z" />` },
+                { label: 'dual corth', icon: `<ellipse cx="12" cy="12" rx="9" ry="5" />` },
                 { label: 'CR HMC', icon: `<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 12 10 12-4.48 12-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />` },
                 { label: 'CR KT PG HC', icon: `<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 12 10 12-4.48 12-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />` },
                 { label: 'Progressive Lens', icon: `<path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" /><path d="M12 6a6 6 0 0 0-6 6h12a6 6 0 0 0-6-6z" />` }
@@ -1109,6 +1107,9 @@ export function printPrescriptionHTML(rx: Prescription) {
             <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; justify-content: space-between;">
               <div style="display: flex; flex-direction: column; gap: 8px;">
                 ${[
+                  { label: 'Marry blue', icon: `<ellipse cx="12" cy="12" rx="9" ry="5" />` },
+                  { label: 'Blue light PG - progressive', icon: `<path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" /><path d="M12 6a6 6 0 0 0-6 6h12a6 6 0 0 0-6-6z" />` },
+                  { label: 'Blue light KT - progressive', icon: `<path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" /><path d="M12 6a6 6 0 0 0-6 6h12a6 6 0 0 0-6-6z" />` },
                   { label: 'CR PG HC', icon: `<circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />` },
                   { label: 'CR HC', icon: `<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 12 10 12-4.48 12-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />` }
                 ].map(item => {
@@ -1189,8 +1190,39 @@ export function printPrescriptionHTML(rx: Prescription) {
       </body>
     </html>
   `;
-  printWindow.document.write(printContent);
-  printWindow.document.close();
+
+  // Create an invisible iframe
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  const iframeDoc = iframe.contentWindow?.document || iframe.contentDocument;
+  if (!iframeDoc) {
+    alert("Failed to initialize printer frame.");
+    return;
+  }
+
+  iframeDoc.write(printContent);
+  iframeDoc.close();
+
+  // Print after short timeout to let resources render
+  setTimeout(() => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch (e) {
+      console.error("Print failed:", e);
+    }
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 1000);
+  }, 500);
 }
 
 export function PrescriptionPDFViewerPanel({ prescription }: PrescriptionPDFProps) {
@@ -1437,6 +1469,7 @@ export function PrescriptionPDFViewerPanel({ prescription }: PrescriptionPDFProp
               <div className="flex-1 flex flex-col gap-3">
                 {[
                   { label: 'Blue Light', icon: <svg className="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-3z"/></svg> },
+                  { label: 'MR8', icon: <svg className="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/></svg> },
                   { label: 'CR KT HC', icon: <svg className="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="12" rx="9" ry="5"/></svg> },
                   { label: 'CR KT HMC', icon: <svg className="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="12" rx="9" ry="5"/></svg> },
                   { label: 'Contact Lens', icon: <svg className="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/></svg> }
@@ -1469,6 +1502,7 @@ export function PrescriptionPDFViewerPanel({ prescription }: PrescriptionPDFProp
               <div className="flex-1 flex flex-col gap-3">
                 {[
                   { label: 'Blue Cut', icon: <svg className="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="12" r="3"/><path d="M9 12h6M6 9h12"/></svg> },
+                  { label: 'dual corth', icon: <svg className="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="12" rx="9" ry="5"/></svg> },
                   { label: 'CR HMC', icon: <svg className="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="12" rx="9" ry="5"/></svg> },
                   { label: 'CR KT PG HC', icon: <svg className="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="12" rx="9" ry="5"/></svg> },
                   { label: 'Progressive Lens', icon: <svg className="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><line x1="3.6" y1="12" x2="20.4" y2="12"/></svg> }
@@ -1501,6 +1535,9 @@ export function PrescriptionPDFViewerPanel({ prescription }: PrescriptionPDFProp
               <div className="flex-1 flex flex-col gap-2 justify-between">
                 <div className="flex flex-col gap-2">
                   {[
+                    { label: 'Marry blue', icon: <svg className="w-3.5 h-3.5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="12" rx="9" ry="5"/></svg> },
+                    { label: 'Blue light PG - progressive', icon: <svg className="w-3.5 h-3.5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><line x1="3.6" y1="12" x2="20.4" y2="12"/></svg> },
+                    { label: 'Blue light KT - progressive', icon: <svg className="w-3.5 h-3.5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><line x1="3.6" y1="12" x2="20.4" y2="12"/></svg> },
                     { label: 'CR PG HC', icon: <svg className="w-3.5 h-3.5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg> },
                     { label: 'CR HC', icon: <svg className="w-3.5 h-3.5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="12" rx="9" ry="5"/></svg> }
                   ].map((item, idx) => {

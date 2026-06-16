@@ -1,0 +1,22 @@
+{
+  "short_name": "Hima Bindhu",
+  "name": "Himabindhu Eye Testing & Opticals",
+  "description": "Clinic console for eye testing and opticals management.",
+  "icons": [
+    {
+      "src": "/realistic_eye_logo.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/realistic_eye_logo.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a8a",
+  "display": "standalone",
+  "orientation": "portrait"
+}

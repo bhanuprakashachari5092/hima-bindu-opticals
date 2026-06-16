@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isDemoMode = true;
+  const [isDemoMode, setIsDemoMode] = useState(() => localStorage.getItem('hb_demo_mode') === 'true');
 
   // Handle local session recovery
   useEffect(() => {
@@ -129,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     localStorage.setItem('hb_demo_mode', 'true');
     localStorage.setItem('hb_demo_profile', JSON.stringify(demoProfile));
+    setIsDemoMode(true);
     setUserProfile(demoProfile);
     setUser({
       uid: demoProfile.uid,
@@ -141,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearDemo = () => {
     localStorage.removeItem('hb_demo_mode');
     localStorage.removeItem('hb_demo_profile');
+    setIsDemoMode(false);
     setUser(null);
     setUserProfile(null);
   };

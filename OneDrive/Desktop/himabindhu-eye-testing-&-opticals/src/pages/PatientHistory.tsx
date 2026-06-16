@@ -66,6 +66,11 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
   const [isUpdating, setIsUpdating] = useState(false);
 
   const adviceOptions = [
+    "MR8",
+    "dual corth",
+    "Marry blue",
+    "Blue light PG - progressive",
+    "Blue light KT - progressive",
     "Blue Light Protection",
     "Blue Cut Lens",
     "CR PG HC",
@@ -536,10 +541,25 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
                           {adviceOptions.map(advice => {
                             const isChecked = editAdvice.includes(advice);
                             return (
-                              <label key={advice} className="flex items-center gap-1.5 text-[10px] cursor-pointer">
-                                <input type="checkbox" checked={isChecked} onChange={() => handleToggleAdvice(advice)} className="rounded text-slate-900 h-3 w-3" />
-                                <span>{advice}</span>
-                              </label>
+                              <button 
+                                key={advice}
+                                type="button"
+                                onClick={() => handleToggleAdvice(advice)}
+                                className={`flex items-center justify-between p-1.5 rounded-lg border text-[9.5px] font-bold text-left transition-all ${
+                                  isChecked 
+                                    ? 'bg-amber-600 border-amber-600 text-white shadow-xs' 
+                                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                }`}
+                              >
+                                <span className="truncate">{advice}</span>
+                                <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center text-[7px] font-bold shrink-0 ml-1 transition-all ${
+                                  isChecked 
+                                    ? 'bg-white text-amber-600 border-white' 
+                                    : 'border-gray-300 bg-white'
+                                }`}>
+                                  {isChecked ? "✓" : ""}
+                                </div>
+                              </button>
                             );
                           })}
                         </div>
