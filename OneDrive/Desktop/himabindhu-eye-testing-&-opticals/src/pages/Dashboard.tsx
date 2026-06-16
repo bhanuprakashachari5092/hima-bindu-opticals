@@ -429,39 +429,29 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                       Select Spectacle Frame
                     </label>
-                    <select
+                    <input
+                      type="text"
+                      list="frame-suggestions"
                       value={frameName}
                       onChange={(e) => setFrameName(e.target.value)}
-                      className="w-full border border-slate-200 bg-slate-50/50 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:bg-white transition"
-                    >
-                      <option value="">-- Choose Frame Model --</option>
-                      <option value="Onyx Steel Rectangle">Onyx Steel Rectangle (Rectangle)</option>
-                      <option value="Matte Wayfarer Rectangle">Matte Wayfarer Rectangle (Rectangle)</option>
-                      <option value="Crystal Clear Round">Crystal Clear Round (Round)</option>
-                      <option value="Rose Gold Wire Round">Rose Gold Wire Round (Round)</option>
-                      <option value="Vintage Tortoise Cat-Eye">Vintage Tortoise Cat-Eye (Cat-Eye)</option>
-                      <option value="Midnight Velvet Cat-Eye">Midnight Velvet Cat-Eye (Cat-Eye)</option>
-                      <option value="Executive Browline">Executive Browline (Browline)</option>
-                      <option value="Havana Amber Oval">Havana Amber Oval (Oval)</option>
-                      <option value="Silver Whisper Oval">Silver Whisper Oval (Oval)</option>
-                      <option value="Onyx Bold Square">Onyx Bold Square (Square)</option>
-                      <option value="Classic Ebony Clubmaster">Classic Ebony Clubmaster (Clubmaster)</option>
-                      <option value="Hexa-Bronze Geometric">Hexa-Bronze Geometric (Geometric)</option>
-                      <option value="Maverick Gold Aviator">Maverick Gold Aviator (Aviator)</option>
-                      {selectedRx.frameName && !frameName && (
-                        <option value={selectedRx.frameName}>{selectedRx.frameName}</option>
-                      )}
-                    </select>
-
-                    <div className="mt-2">
-                      <input
-                        type="text"
-                        placeholder="Or type custom frame name..."
-                        value={frameName}
-                        onChange={(e) => setFrameName(e.target.value)}
-                        className="w-full border border-slate-200 bg-slate-50/50 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-teal-500 focus:bg-white transition"
-                      />
-                    </div>
+                      placeholder="Type custom frame or select..."
+                      className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+                    />
+                    <datalist id="frame-suggestions">
+                      <option value="Onyx Steel Rectangle" />
+                      <option value="Matte Wayfarer Rectangle" />
+                      <option value="Crystal Clear Round" />
+                      <option value="Rose Gold Wire Round" />
+                      <option value="Vintage Tortoise Cat-Eye" />
+                      <option value="Midnight Velvet Cat-Eye" />
+                      <option value="Executive Browline" />
+                      <option value="Havana Amber Oval" />
+                      <option value="Silver Whisper Oval" />
+                      <option value="Onyx Bold Square" />
+                      <option value="Classic Ebony Clubmaster" />
+                      <option value="Hexa-Bronze Geometric" />
+                      <option value="Maverick Gold Aviator" />
+                    </datalist>
                   </div>
 
                   {/* Select Lens */}
@@ -469,33 +459,23 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                       Select Lens Type
                     </label>
-                    <select
+                    <input
+                      type="text"
+                      list="lens-suggestions"
                       value={lensType}
                       onChange={(e) => setLensType(e.target.value)}
-                      className="w-full border border-slate-200 bg-slate-50/50 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:bg-white transition"
-                    >
-                      <option value="">-- Choose Lens Type --</option>
-                      <option value="Single Vision">Single Vision</option>
-                      <option value="Bifocal">Bifocal</option>
-                      <option value="Progressive">Progressive</option>
-                      <option value="Blue Cut">Blue Cut</option>
-                      <option value="Blue Light Transitions">Blue Light Transitions</option>
-                      <option value="Anti-glare HMC">Anti-glare HMC</option>
-                      <option value="Hard Coat (HC)">Hard Coat (HC)</option>
-                      {selectedRx.lensType && !lensType && (
-                        <option value={selectedRx.lensType}>{selectedRx.lensType}</option>
-                      )}
-                    </select>
-                    
-                    <div className="mt-2">
-                      <input
-                        type="text"
-                        placeholder="Or type custom lens details..."
-                        value={lensType}
-                        onChange={(e) => setLensType(e.target.value)}
-                        className="w-full border border-slate-200 bg-slate-50/50 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-teal-500 focus:bg-white transition"
-                      />
-                    </div>
+                      placeholder="Type custom lens or select..."
+                      className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+                    />
+                    <datalist id="lens-suggestions">
+                      <option value="Single Vision" />
+                      <option value="Bifocal" />
+                      <option value="Progressive" />
+                      <option value="Blue Cut" />
+                      <option value="Blue Light Transitions" />
+                      <option value="Anti-glare HMC" />
+                      <option value="Hard Coat (HC)" />
+                    </datalist>
                   </div>
 
                   {/* Price */}
@@ -508,11 +488,11 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                         ₹
                       </span>
                       <input
-                        type="number"
+                        type="text"
                         placeholder="e.g. 1500"
                         value={orderPrice}
                         onChange={(e) => setOrderPrice(e.target.value)}
-                        className="w-full border border-slate-200 bg-slate-50/50 rounded-xl pl-8 pr-4 py-2.5 text-xs font-extrabold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:bg-white transition"
+                        className="w-full border border-slate-200 bg-white rounded-xl pl-8 pr-4 py-2.5 text-xs font-extrabold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
                       />
                     </div>
                   </div>
