@@ -534,15 +534,40 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
 
                 {/* Submission & Action Buttons */}
                 <div className="pt-6 border-t border-slate-100 space-y-3">
-                  <button
-                    type="button"
-                    onClick={handleSaveOrder}
-                    disabled={isUpdatingOrder}
-                    className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-sm transition cursor-pointer"
-                  >
-                    <Save className="w-4.5 h-4.5" />
-                    <span>{isUpdatingOrder ? "Updating Order..." : "Confirm & Save Order Details"}</span>
-                  </button>
+                  {/* Save Button with Dynamic Disabling when details match */}
+                  {(() => {
+                    const isSaveDisabled = 
+                      isUpdatingOrder || 
+                      !selectedRx || 
+                      (
+                        frameName.trim() === (selectedRx.frameName || '') &&
+                        lensType.trim() === (selectedRx.lensType || '') &&
+                        orderPrice.trim() === (selectedRx.orderPrice || '') &&
+                        orderStatus === (selectedRx.orderStatus || 'Pending')
+                      );
+
+                    return (
+                      <button
+                        type="button"
+                        onClick={handleSaveOrder}
+                        disabled={isSaveDisabled}
+                        className={`w-full py-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition ${
+                          isSaveDisabled 
+                            ? 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed' 
+                            : 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm cursor-pointer'
+                        }`}
+                      >
+                        <Save className="w-4.5 h-4.5" />
+                        <span>
+                          {isUpdatingOrder 
+                            ? "Updating Order..." 
+                            : isSaveDisabled 
+                              ? "Saved & Up to Date" 
+                              : "Confirm & Save Order Details"}
+                        </span>
+                      </button>
+                    );
+                  })()}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
