@@ -1592,12 +1592,12 @@ export function PrescriptionPDFViewerPanel({ prescription }: PrescriptionPDFProp
             </div>
 
             {/* Footer widescreen banner */}
-            <div className="bg-[#1e3b8a] text-white rounded-lg p-2.5 mt-4 grid grid-cols-[auto_1fr] items-center gap-3.5 text-[10px] md:text-xs">
+            <div className="bg-[#1e3b8a] text-white rounded-lg p-2.5 mt-4 flex flex-col sm:grid sm:grid-cols-[auto_1fr] items-center gap-3.5 text-[10px] md:text-xs text-center sm:text-left">
               <div>
                 <div className="font-serif font-black text-xs tracking-wider leading-none">Himabindhu</div>
                 <div className="text-[7.5px] uppercase font-bold tracking-widest mt-0.5 opacity-90">Eye Testing & Opticals</div>
               </div>
-              <div className="flex justify-around text-[8px] font-bold opacity-95">
+              <div className="flex flex-col sm:flex-row sm:justify-around gap-2 sm:gap-1 text-[8px] font-bold opacity-95 w-full items-center">
                 <div className="flex items-center gap-1">
                   <svg className="w-3.5 h-3.5 stroke-white stroke-2" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M6 21h12M12 17v4" /></svg>
                   <span>Advanced Computerised Eye Testing</span>
@@ -1620,7 +1620,7 @@ export function PrescriptionPDFViewerPanel({ prescription }: PrescriptionPDFProp
             </div>
 
             {/* Consulting Schedules */}
-            <div className="mt-2.5 flex justify-center items-center gap-4 text-[8.5px] text-[#0c5975] font-bold">
+            <div className="mt-2.5 flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4 text-[8.5px] text-[#0c5975] font-bold text-center">
               <span className="border border-[#1e3b8a] text-[#1e3b8a] rounded-full px-2.5 py-0.5 text-[7.5px] uppercase tracking-wider font-extrabold bg-white">Consulting Hours</span>
               <div className="flex items-center gap-1.5">
                 <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-[#0c5975]"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 0 0-1.41 0a.996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 0 0-1.41 0a.996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.02.39 1.41 0c.39-.39.39-1.02 0-1.41l-1.06-1.06zm1.06-12.37l-1.06 1.06a.996.996 0 0 0 0 1.41c.39.39 1.03.39 1.41 0l1.06-1.06a.996.996 0 0 0 0-1.41a.996.996 0 0 0-1.41 0zm-12.37 12.37l-1.06 1.06a.996.996 0 0 0 0 1.41c.39.39 1.02.39 1.41 0l1.06-1.06a.996.996 0 0 0 0-1.41a.996.996 0 0 0-1.41 0z"/></svg>

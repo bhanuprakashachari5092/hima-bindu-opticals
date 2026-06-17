@@ -63,7 +63,7 @@ export default function Layout({ activeTab, setActiveTab, children }: LayoutProp
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans" id="app-layout">
       {/* Top Premium Glassmorphic Clinical Header */}
-      <header className="bg-slate-950/95 text-white shadow-[0_4px_30px_rgba(0,0,0,0.4)] border-b border-slate-800/70 px-4 py-3.5 sticky top-0 z-40 backdrop-blur-xl">
+      <header className="bg-slate-950/95 text-white shadow-[0_4px_30px_rgba(0,0,0,0.4)] border-b border-slate-800/70 px-2.5 py-3 sm:px-4 sm:py-3.5 sticky top-0 z-40 backdrop-blur-xl">
         <div className={`mx-auto flex items-center justify-between ${activeTab === 'prescription' ? 'max-w-none px-2' : 'max-w-7xl'}`}>
           <div className="flex items-center gap-4">
             {activeTab === 'prescription' ? (
@@ -82,15 +82,15 @@ export default function Layout({ activeTab, setActiveTab, children }: LayoutProp
                 <Menu className="w-5 h-5 text-slate-350" />
               </button>
             )}
-            <div className="flex items-center gap-3.5">
+            <div className="flex items-center gap-2 sm:gap-3.5">
               <div className="relative">
                 <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-xl blur opacity-30 animate-pulse"></div>
-                <div className="relative bg-gradient-to-br from-slate-900 to-slate-950 p-2.5 rounded-xl text-teal-400 border border-slate-800 flex items-center justify-center shadow-lg">
-                  <Eye className="w-5 h-5 text-teal-350" />
+                <div className="relative bg-gradient-to-br from-slate-900 to-slate-950 p-1.5 sm:p-2.5 rounded-xl text-teal-400 border border-slate-800 flex items-center justify-center shadow-lg">
+                  <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-teal-350" />
                 </div>
               </div>
               <div>
-                <span className="font-extrabold tracking-[0.12em] text-sm md:text-base block text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-teal-200 uppercase cursor-default">
+                <span className="font-extrabold tracking-[0.12em] text-xs sm:text-sm md:text-base block text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-teal-200 uppercase cursor-default">
                   HIMABINDHU EYE CLINIC
                 </span>
                 <div className="flex items-center gap-1.5 mt-0.5">
@@ -291,7 +291,7 @@ export default function Layout({ activeTab, setActiveTab, children }: LayoutProp
               </motion.div>
             </AnimatePresence>
           </div>
-          <footer className="mt-12 pt-5 border-t border-slate-200/80 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs font-semibold text-slate-400 font-sans">
+          <footer className="mt-6 md:mt-12 pt-4 md:pt-5 border-t border-slate-200/80 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs font-semibold text-slate-400 font-sans">
             <p>© 2026 Himabindhu Eye Clinic. All rights reserved.</p>
             <div className="flex flex-wrap items-center justify-center gap-1.5 md:gap-2 text-[10.5px] text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-150">
               <span>Developed by</span>

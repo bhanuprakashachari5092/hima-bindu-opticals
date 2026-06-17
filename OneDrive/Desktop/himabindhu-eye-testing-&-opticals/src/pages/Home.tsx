@@ -11,13 +11,15 @@ import {
   ShieldCheck, 
   Glasses, 
   Activity, 
+  ChevronLeft,
   ChevronRight, 
   FileText, 
   Printer,
   ShieldAlert,
   Loader2,
   Lock,
-  ArrowRight
+  ArrowRight,
+  X
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -147,6 +149,28 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
     }, 4500);
     return () => clearInterval(interval);
   }, []);
+
+  const handlePrevGallery = () => {
+    if (isFlashing) return;
+    setIsFlashing(true);
+    setTimeout(() => {
+      setCurrentGalleryIdx((prev) => (prev - 1 + clinicImages.length) % clinicImages.length);
+    }, 250);
+    setTimeout(() => {
+      setIsFlashing(false);
+    }, 500);
+  };
+
+  const handleNextGallery = () => {
+    if (isFlashing) return;
+    setIsFlashing(true);
+    setTimeout(() => {
+      setCurrentGalleryIdx((prev) => (prev + 1) % clinicImages.length);
+    }, 250);
+    setTimeout(() => {
+      setIsFlashing(false);
+    }, 500);
+  };
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -267,11 +291,8 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
             if (resData.data.length === 0) {
               setSearchError('No matching diagnostic registers found in Google Sheets. Double-check your ID or mobile phone.');
             } else {
-              const exactMatch = resData.data.find((rx: any) => rx.patientId.toLowerCase() === queryStr) || resData.data[0];
-              setSelectedRx(exactMatch);
-              setTimeout(() => {
-                printPrescriptionHTML(exactMatch);
-              }, 150);
+              // Set selectedRx to null so patient lists are shown and the user clicks to open
+              setSelectedRx(null);
             }
             setSearching(false);
             return; // Successfully retrieved from GSheets!
@@ -293,11 +314,8 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       if (filtered.length === 0) {
         setSearchError('No matching diagnostic registers found. Double-check your ID or mobile phone.');
       } else {
-        const exactMatch = filtered.find(rx => rx.patientId.toLowerCase() === queryStr) || filtered[0];
-        setSelectedRx(exactMatch);
-        setTimeout(() => {
-          printPrescriptionHTML(exactMatch);
-        }, 150);
+        // Set selectedRx to null so patient lists are shown and the user clicks to open
+        setSelectedRx(null);
       }
     } catch (err: any) {
       console.error("Lookup diagnostics failed", err);
@@ -312,10 +330,10 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       className="min-h-screen bg-slate-50 font-sans text-slate-900 select-text"
     >
       {/* Top Header Navigation */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-6 md:px-8 py-5 flex items-center justify-between transition-all duration-300">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3 md:px-8 md:py-5 flex items-center justify-between transition-all duration-300">
         <div className="flex items-center gap-4.5">
           <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-md shadow-slate-900/15 transform hover:scale-105 transition-transform flex items-center justify-center bg-white border border-slate-200 p-0.5">
-            <img src="/realistic_eye_logo.png" alt="Himabindhu Eye Testing Logo" className="w-full h-full object-cover rounded-xl" />
+            <img src="/realistic_eye_logo.png" alt="Himabindhu Eye Testing Logo" className="w-full h-full object-cover rounded-xl pointer-events-none select-none" />
           </div>
           <div className="space-y-1">
             <h1 
@@ -351,7 +369,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden text-white py-28 px-6 border-b border-teal-950">
+      <section className="relative overflow-hidden text-white py-14 px-4 sm:py-28 sm:px-6 border-b border-teal-950">
         {/* Background Video with image fallback poster */}
         <video
           autoPlay
@@ -413,18 +431,18 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6, duration: 0.6 }}
-              className="flex flex-wrap justify-center lg:justify-start gap-4 pt-2"
+              className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4 pt-2 w-full sm:w-auto"
             >
               <a 
                 href="#prescription-finder" 
-                className="px-6 py-3.5 bg-amber-600 hover:bg-amber-800 hover:scale-[1.03] text-white text-xs font-extrabold rounded-2xl shadow-lg shadow-amber-500/20 transition flex items-center gap-2 transform duration-200"
+                className="w-full sm:w-auto justify-center px-6 py-3.5 bg-amber-600 hover:bg-amber-800 hover:scale-[1.03] text-white text-xs font-extrabold rounded-2xl shadow-lg shadow-amber-500/20 transition flex items-center gap-2 transform duration-200"
               >
                 <Search className="w-4.5 h-4.5" />
                 Find Your Prescription (Rx)
               </a>
               <a 
                 href="#timings" 
-                className="px-6 py-3.5 bg-white/10 hover:bg-white/15 hover:scale-[1.03] text-white border border-white/20 text-xs font-bold rounded-2xl transition flex items-center gap-2 transform duration-200"
+                className="w-full sm:w-auto justify-center px-6 py-3.5 bg-white/10 hover:bg-white/15 hover:scale-[1.03] text-white border border-white/20 text-xs font-bold rounded-2xl transition flex items-center gap-2 transform duration-200"
               >
                 <Clock className="w-4.5 h-4.5" />
                 Check consulting Hours
@@ -440,7 +458,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
             className="lg:col-span-5 flex flex-col justify-center text-center space-y-4 font-telugu"
           >
             <h3 
-              className="text-6xl md:text-7xl font-black leading-none tracking-wider select-none bg-gradient-to-r from-white via-amber-100 to-amber-400 bg-clip-text text-transparent filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
+              className="text-4xl sm:text-5xl md:text-7xl font-black leading-none tracking-wider select-none bg-gradient-to-r from-white via-amber-100 to-amber-400 bg-clip-text text-transparent filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
               style={{ fontFamily: "'Ramabhadra', sans-serif", fontWeight: 900 }}
             >
               హిమబిందు
@@ -449,14 +467,14 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
             <div className="h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent my-2 max-w-xs mx-auto w-full"></div>
             
             <p 
-              className="text-3xl md:text-4xl font-black tracking-wider select-none bg-gradient-to-r from-amber-200 to-white bg-clip-text text-transparent filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
+              className="text-2xl sm:text-3xl md:text-4xl font-black tracking-wider select-none bg-gradient-to-r from-amber-200 to-white bg-clip-text text-transparent filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
               style={{ fontFamily: "'Ramabhadra', sans-serif", fontWeight: 900 }}
             >
               ఐ టెస్టింగ్ & ఆప్టికల్స్
             </p>
             
             <p 
-              className="text-sm md:text-base text-white leading-relaxed max-w-md mx-auto font-extrabold select-none tracking-wide filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
+              className="text-xs sm:text-sm md:text-base text-white leading-relaxed max-w-md mx-auto font-extrabold select-none tracking-wide filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
               style={{ fontFamily: "'Ramabhadra', sans-serif", letterSpacing: '0.03em' }}
             >
               కంప్యూటరైజ్డ్ నేత్ర పరీక్షా కేంద్రం మరియు కాంటాక్ట్ లెన్స్ క్లినిక్
@@ -497,7 +515,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       </section>
 
       {/* Interactive Prescription Finder Section */}
-      <section id="prescription-finder" className="max-w-3xl mx-auto py-20 px-6">
+      <section id="prescription-finder" className="max-w-3xl mx-auto py-10 px-4 sm:py-20 sm:px-6">
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
           <div className="p-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-950">
             <div className="flex items-center gap-3">
@@ -558,10 +576,10 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
                   <div className="grid grid-cols-1 gap-2">
                     {searchResults.map((rx) => (
                       <button
-                        key={rx.id}
+                        key={rx.prescriptionId}
                         onClick={() => setSelectedRx(rx)}
                         className={`w-full p-4 border rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between text-left transition gap-4 ${
-                          selectedRx?.id === rx.id 
+                          selectedRx?.prescriptionId === rx.prescriptionId 
                             ? 'border-blue-900 bg-amber-50/25/35 ring-1 ring-amber-500/30' 
                             : 'border-slate-200 hover:border-slate-300 bg-white'
                         }`}
@@ -571,55 +589,104 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
                             <span className="font-extrabold text-slate-900 text-xs">{rx.patientName}</span>
                             <span className="text-[9px] bg-slate-100 text-slate-600 font-mono px-1.5 py-0.5 rounded font-bold uppercase">{rx.patientId}</span>
                           </div>
-                          <p className="text-[10px] text-slate-450 mt-1 font-medium">Exam Date: <strong className="text-slate-600 font-bold">{rx.date}</strong> | Phone: <strong className="text-slate-600 font-semibold">{rx.mobile}</strong></p>
+                          <p className="text-[10px] text-slate-450 mt-1 font-medium">
+                            Exam Date: <strong className="text-slate-600 font-bold">{rx.date}</strong> | Phone: <strong className="text-slate-600 font-semibold">{rx.mobile}</strong>
+                          </p>
+                          
+                          {/* Inline Spectacles Ready Status */}
+                          <div className="mt-2 flex flex-wrap gap-2 items-center">
+                            {rx.orderStatus === 'Ready' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-250 rounded text-[9px] font-black uppercase tracking-wider">
+                                🟢 Specs Ready
+                              </span>
+                            ) : rx.orderStatus === 'Crafting' || rx.orderStatus === 'Pending' || (rx.frameName || rx.lensType) ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-250 rounded text-[9px] font-black uppercase tracking-wider">
+                                🔴 Crafting
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded text-[9px] font-bold uppercase tracking-wider">
+                                ⚪ No active specs order
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-1.5 text-xs font-black text-slate-900 uppercase tracking-wider self-start sm:self-auto">
                           Select Record
-                          <ChevronRight className="w-4 h-4" />
+                          <ArrowRight className="w-4 h-4" />
                         </div>
                       </button>
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
 
-                {selectedRx && (
-                  <div className="pt-6 border-t border-slate-150 space-y-4">
-                    {/* Spectacles Order Status Card */}
-                    {(selectedRx.frameName || selectedRx.lensType) && (
-                      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="space-y-1.5">
-                          <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest font-mono">
-                            Spectacles Order Status
-                          </span>
-                          <h4 className="text-sm font-bold text-slate-800">
-                            Frame: <span className="text-slate-950 font-extrabold">{selectedRx.frameName || 'Not Selected'}</span>
-                          </h4>
-                          <p className="text-[11px] text-slate-500 font-semibold">
-                            Lens: <span className="text-slate-700 font-bold">{selectedRx.lensType || 'Not Selected'}</span>
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {selectedRx.orderStatus === 'Ready' ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-250 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-emerald-50">
-                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                              Ready for Collection
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-250 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-amber-50">
-                              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                              Crafting in Progress
-                            </span>
-                          )}
-                        </div>
+            {selectedRx && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 animate-fade-in overflow-hidden">
+                <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden transition-all transform scale-100">
+                  
+                  {/* Modal Header */}
+                  <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between border-b border-slate-950 shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-amber-400" />
                       </div>
-                    )}
+                      <div>
+                        <h3 className="font-extrabold text-xs sm:text-sm uppercase tracking-wider text-white">Patient Clinical Registry</h3>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 font-mono">Rx ID: {selectedRx.prescriptionId} | ID: {selectedRx.patientId}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRx(null)}
+                      className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white transition flex items-center justify-center font-bold cursor-pointer border border-white/10"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
 
-                    <h5 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider mb-4">Official Diagnostic Prescription</h5>
-                    <div className="bg-slate-50 border border-slate-200 rounded-3xl p-2 md:p-4 shadow-inner overflow-hidden">
-                      <PrescriptionPDFViewerPanel prescription={selectedRx} />
+                  {/* Modal Scrollable Content */}
+                  <div className="p-4 sm:p-6 overflow-y-auto space-y-6">
+                    {/* Spectacles Order Status Card */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest font-mono">
+                          Spectacles Order Status
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-800">
+                          Frame: <span className="text-slate-950 font-extrabold">{selectedRx.frameName || 'No Frame Selected'}</span>
+                        </h4>
+                        <p className="text-[11px] text-slate-500 font-semibold">
+                          Lens: <span className="text-slate-700 font-bold">{selectedRx.lensType || 'No Lens Selected'}</span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {selectedRx.orderStatus === 'Ready' ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-250 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-emerald-50">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                            Ready for Collection
+                          </span>
+                        ) : selectedRx.orderStatus === 'Crafting' || selectedRx.orderStatus === 'Pending' || (selectedRx.frameName || selectedRx.lensType) ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-250 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-amber-50">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                            Crafting / Processing in Progress
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-xl text-xs font-black uppercase tracking-wider">
+                            No Active Spectacles Order
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h5 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Official Diagnostic Prescription</h5>
+                      <div className="bg-slate-50 border border-slate-200 rounded-3xl p-1 md:p-3 shadow-inner overflow-hidden">
+                        <PrescriptionPDFViewerPanel prescription={selectedRx} />
+                      </div>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             )}
           </div>
@@ -627,15 +694,17 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       </section>
 
       {/* Chief Optometrist & Clinical Director Profile Section */}
-      <section className="bg-slate-50 py-20 px-6 border-t border-slate-150">
+      <section className="bg-slate-50 py-10 px-4 sm:py-20 sm:px-6 border-t border-slate-150">
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
           {/* Left Column: Bio Photo */}
           <div className="md:col-span-5 flex justify-center">
             <div className="w-full max-w-sm aspect-[4/3] sm:aspect-square md:h-[400px] overflow-hidden relative rounded-3xl shadow-xl shadow-slate-200 border-2 border-white bg-slate-100">
-              <img
-                src="/doctor_1.jpg"
-                alt="M. Nagaraja Achari (Chief Optometrist)"
-                className="w-full h-full object-cover animate-fade-in"
+              {/* Doctor Bio Photo (div with background image to prevent browser-injected Google Lens/Edit buttons) */}
+              <div
+                style={{ backgroundImage: 'url("/doctor_1.jpg")' }}
+                role="img"
+                aria-label="M. Nagaraja Achari (Chief Optometrist)"
+                className="w-full h-full bg-cover bg-center animate-fade-in pointer-events-none select-none"
               />
             </div>
           </div>
@@ -684,7 +753,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       </section>
 
       {/* Services Section */}
-      <section id="services" className="bg-white py-16 px-6 border-t border-b border-slate-150">
+      <section id="services" className="bg-white py-10 px-4 sm:py-16 sm:px-6 border-t border-b border-slate-150">
         <div className="max-w-5xl mx-auto space-y-12">
           <div className="text-center space-y-2">
             <h3 className="text-2xl font-black text-slate-900 uppercase font-serif">Our Optical Clinic Services</h3>
@@ -716,7 +785,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       </section>
 
       {/* Clinic Showcase & Luxury Gallery */}
-      <section className="bg-slate-50 py-20 px-6 border-b border-slate-150">
+      <section className="bg-slate-50 py-10 px-4 sm:py-20 sm:px-6 border-b border-slate-150">
         <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 items-center gap-12">
           {/* Left Column: Natural luxury description */}
           <div className="lg:col-span-6 space-y-6">
@@ -764,11 +833,14 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
           {/* Right Column: Carousel with flash animation */}
           <div className="lg:col-span-6">
             <div className="relative aspect-[4/3] rounded-3xl overflow-hidden border border-slate-200/80 shadow-2xl bg-slate-950 group">
-              {/* Active Image */}
-              <img
-                src={clinicImages[currentGalleryIdx].url}
-                alt={clinicImages[currentGalleryIdx].caption}
-                className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-[1.03] ${
+              {/* Active Image (div with background image to completely prevent browser-injected Google Lens/Edit buttons) */}
+              <div
+                style={{
+                  backgroundImage: `url(${clinicImages[currentGalleryIdx].url})`
+                }}
+                role="img"
+                aria-label={clinicImages[currentGalleryIdx].caption}
+                className={`w-full h-full bg-cover bg-center transition-all duration-300 group-hover:scale-[1.03] pointer-events-none select-none ${
                   isFlashing ? 'brightness-[2.2] scale-[0.995] filter contrast-[0.9]' : 'brightness-[1] scale-100 filter contrast-100'
                 }`}
               />
@@ -779,6 +851,24 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
                   isFlashing ? 'opacity-95' : 'opacity-0'
                 }`}
               />
+
+              {/* Left Navigation Arrow */}
+              <button
+                onClick={handlePrevGallery}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-slate-900/60 backdrop-blur-md text-white border border-white/15 opacity-80 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 active:scale-95 shadow-lg flex items-center justify-center cursor-pointer"
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              {/* Right Navigation Arrow */}
+              <button
+                onClick={handleNextGallery}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-slate-900/60 backdrop-blur-md text-white border border-white/15 opacity-80 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 hover:scale-110 active:scale-95 shadow-lg flex items-center justify-center cursor-pointer"
+                aria-label="Next image"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
 
               {/* Carousel Indicators & Captions */}
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent p-6 z-10 space-y-2">
@@ -819,7 +909,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       </section>
 
       {/* Luxury Frame Styles Showcase */}
-      <section id="designer-frames" className="bg-slate-950 text-white py-24 px-6 relative overflow-hidden">
+      <section id="designer-frames" className="bg-slate-950 text-white py-12 px-4 sm:py-24 sm:px-6 relative overflow-hidden">
         {/* Ambient glow */}
         <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-amber-600/5 rounded-full filter blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-slate-700/20 rounded-full filter blur-3xl pointer-events-none" />
@@ -851,7 +941,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
             whileInView="visible"
             viewport={{ once: true }}
             variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.07 } } }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-5"
+            className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5"
           >
             {[
               { id: 'rectangle', name: 'Rectangle Frames', tags: 'Modern • Professional • Everyday Wear', image: '/frames/rectangle.png' },
@@ -879,10 +969,18 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/10 to-transparent z-10 pointer-events-none" />
                   {/* Gold top bar on hover */}
                   <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500 to-transparent z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <img
-                    src={frame.image}
-                    alt={frame.name}
-                    className="w-full h-full object-contain p-3 transform group-hover:scale-110 group-hover:rotate-[-1deg] transition-transform duration-500"
+                  {/* Frame Styles image (div with background image to prevent browser-injected Google Lens/Edit buttons) */}
+                  <div
+                    style={{ 
+                      backgroundImage: `url(${frame.image})`,
+                      backgroundSize: 'contain',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundOrigin: 'content-box'
+                    }}
+                    role="img"
+                    aria-label={frame.name}
+                    className="w-full h-full p-3 transform group-hover:scale-110 group-hover:rotate-[-1deg] transition-transform duration-500 pointer-events-none select-none"
                   />
                   {/* View Collection badge */}
                   <div className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0">
@@ -921,7 +1019,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       </section>
 
       {/* Contact & Hours Section */}
-      <section id="timings" className="max-w-5xl mx-auto py-16 px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      <section id="timings" className="max-w-5xl mx-auto py-10 px-4 sm:py-16 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12 items-center">
         <div className="space-y-6">
           <h3 className="text-2xl font-black text-slate-900 uppercase font-serif">Consulting Schedule</h3>
           
@@ -1027,7 +1125,10 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
               <Phone className="w-5 h-5 text-amber-400 shrink-0" />
               <div>
                 <p className="font-bold text-white">Direct Phone Support</p>
-                <p className="text-slate-400 font-mono mt-1">90104 08092, 79892 89011</p>
+                <p className="text-slate-400 font-mono mt-1 text-xs">
+                  <a href="tel:9010408092" className="hover:text-amber-450 transition-colors">90104 08092</a>,{' '}
+                  <a href="tel:7989289011" className="hover:text-amber-450 transition-colors">79892 89011</a>
+                </p>
               </div>
             </div>
           </div>

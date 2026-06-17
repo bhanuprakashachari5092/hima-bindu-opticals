@@ -21,7 +21,8 @@ import {
   Printer,
   Download,
   MessageCircle,
-  Settings
+  Settings,
+  CheckCircle
 } from 'lucide-react';
 
 interface Patient {
@@ -201,6 +202,13 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
   const [isLoadingRxId, setIsLoadingRxId] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [activeCreatedRx, setActiveCreatedRx] = useState<Prescription | null>(null);
+  const [successModal, setSuccessModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    rxId: string;
+    patientId: string;
+  } | null>(null);
 
 
   // Advice options
@@ -484,7 +492,13 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
         list.push(finalRx);
         localStorage.setItem('hb_demo_prescriptions', JSON.stringify(list));
         setActiveCreatedRx(finalRx);
-        alert(`Spectacle Rx ${prescriptionId} finalized. Patient ${finalPatientId} registered.`);
+        setSuccessModal({
+          show: true,
+          title: "Prescription Finalized",
+          message: `Spectacle Rx ${prescriptionId} finalized. Patient ${finalPatientId} registered.`,
+          rxId: prescriptionId,
+          patientId: finalPatientId
+        });
       } else {
         const rxDocRef = doc(db, 'prescriptions', prescriptionId);
         await setDoc(rxDocRef, {
@@ -495,7 +509,13 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
         });
 
         setActiveCreatedRx(finalRx);
-        alert(`Ophthalmic Spectacle Rx ${prescriptionId} synchronized with clinic database for Patient ${finalPatientId}.`);
+        setSuccessModal({
+          show: true,
+          title: "Database Sync Complete",
+          message: `Ophthalmic Spectacle Rx ${prescriptionId} synchronized with clinic database for Patient ${finalPatientId}.`,
+          rxId: prescriptionId,
+          patientId: finalPatientId
+        });
       }
 
       // Sync to Google Sheets Web App Webhook
@@ -1259,6 +1279,84 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
                   Save Config
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Success Modal Popup */}
+        {successModal && activeCreatedRx && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
+            <div className="bg-white rounded-3xl shadow-2xl border border-gray-150 max-w-md w-full overflow-hidden transition-all transform scale-100 flex flex-col p-6 text-center space-y-6">
+              
+              {/* Checkmark animation */}
+              <div className="mx-auto w-16 h-16 rounded-full bg-emerald-50 border border-emerald-150 flex items-center justify-center text-emerald-600 animate-bounce">
+                <CheckCircle className="w-9 h-9" />
+              </div>
+
+              {/* Title & Description */}
+              <div className="space-y-2">
+                <h3 className="text-lg font-black text-slate-900 font-serif leading-tight">
+                  {successModal.title}
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed font-semibold px-2">
+                  {successModal.message}
+                </p>
+              </div>
+
+              {/* Registry IDs details */}
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 border border-slate-150 p-4 rounded-2xl text-xs font-bold text-slate-800">
+                <div className="space-y-1 text-center">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Patient ID</p>
+                  <p className="font-mono text-emerald-800 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 uppercase inline-block font-black">
+                    {successModal.patientId}
+                  </p>
+                </div>
+                <div className="space-y-1 text-center">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rx Number</p>
+                  <p className="font-mono text-blue-800 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 uppercase inline-block font-black">
+                    {successModal.rxId}
+                  </p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col gap-2 pt-2">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => printPrescriptionHTML(activeCreatedRx)}
+                    className="flex-1 px-4 py-2.5 bg-slate-900 hover:bg-slate-850 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
+                  >
+                    <Printer className="w-4 h-4 text-emerald-400" />
+                    Print Laser Slip
+                  </button>
+
+                  <PDFDownloadLink
+                    document={<PrescriptionPDFDocument prescription={activeCreatedRx} />}
+                    fileName={`Prescription_${successModal.rxId}.pdf`}
+                    className="flex-1 px-4 py-2.5 bg-slate-850 hover:bg-slate-800 text-slate-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 decoration-none shadow-xs cursor-pointer"
+                  >
+                    {({ loading }) => (
+                      <>
+                        <Download className="w-4 h-4 text-amber-400" />
+                        {loading ? 'Compiling...' : 'Download PDF'}
+                      </>
+                    )}
+                  </PDFDownloadLink>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSuccessModal(null);
+                    handleClearForm();
+                  }}
+                  className="w-full px-5 py-3 bg-emerald-805 hover:bg-emerald-900 text-white rounded-xl text-xs font-extrabold transition cursor-pointer shadow-md"
+                >
+                  Close & Start New Entry
+                </button>
+              </div>
+
             </div>
           </div>
         )}

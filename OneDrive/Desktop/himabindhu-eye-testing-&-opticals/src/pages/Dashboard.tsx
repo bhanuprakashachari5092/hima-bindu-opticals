@@ -160,6 +160,13 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     setOrderPrice(rx.orderPrice || '');
     setOrderStatus(rx.orderStatus || 'Pending');
     setIsOrderSent(rx.isOrderSent || false);
+
+    // Auto-scroll to customizer desk on mobile screens
+    if (window.innerWidth < 1024) {
+      setTimeout(() => {
+        document.getElementById('order-customizer-panel')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
   };
 
   const syncOrderToGoogleSheet = async (rx: Prescription, updatedData: any) => {
@@ -546,7 +553,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
           </div>
 
           {/* Right Panel: Order Setup & Actions */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="lg:col-span-5 space-y-6" id="order-customizer-panel">
             {selectedRx ? (
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-6">
                 <div>
@@ -851,37 +858,79 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                 <p>No prescriptions have been compiled on this shift yet.</p>
               </div>
             ) : (
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="bg-slate-50/75 text-[10px] text-slate-400 font-bold uppercase tracking-widest border-b border-slate-150">
-                    <th className="px-6 py-3.5">Rx Number</th>
-                    <th className="px-6 py-3.5">Patient Name</th>
-                    <th className="px-6 py-3.5">Age / Sex</th>
-                    <th className="px-6 py-3.5">Mobile</th>
-                    <th className="px-6 py-3.5">Date Checked</th>
-                    <th className="px-6 py-3.5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700 font-medium font-sans">
+              <>
+                {/* Desktop View Table */}
+                <div className="hidden md:block">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-50/75 text-[10px] text-slate-400 font-bold uppercase tracking-widest border-b border-slate-150">
+                        <th className="px-6 py-3.5">Rx Number</th>
+                        <th className="px-6 py-3.5">Patient Name</th>
+                        <th className="px-6 py-3.5">Age / Sex</th>
+                        <th className="px-6 py-3.5">Mobile</th>
+                        <th className="px-6 py-3.5">Date Checked</th>
+                        <th className="px-6 py-3.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium font-sans">
+                      {recentPrescriptions.map((rx) => (
+                        <tr key={rx.prescriptionId} className="hover:bg-slate-50 transition cursor-pointer group" onClick={() => handleInspectPrescription(rx)}>
+                          <td className="px-6 py-4 font-mono font-bold text-slate-900 text-xs">{rx.prescriptionId}</td>
+                          <td className="px-6 py-4 font-bold text-slate-800">{rx.patientName}</td>
+                          <td className="px-6 py-4 text-slate-500">{rx.age} / {rx.gender}</td>
+                          <td className="px-6 py-4 text-slate-500">{rx.mobile}</td>
+                          <td className="px-6 py-4 text-slate-450 font-mono">{rx.date}</td>
+                          <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => handleInspectPrescription(rx)}
+                              className="text-amber-600 font-bold text-xs opacity-80 hover:opacity-100 hover:underline transition-opacity px-2 py-1 rounded"
+                            >
+                              Inspect Rx
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile View Card List */}
+                <div className="block md:hidden divide-y divide-slate-100">
                   {recentPrescriptions.map((rx) => (
-                    <tr key={rx.prescriptionId} className="hover:bg-slate-50 transition cursor-pointer group" onClick={() => handleInspectPrescription(rx)}>
-                      <td className="px-6 py-4 font-mono font-bold text-slate-900 text-xs">{rx.prescriptionId}</td>
-                      <td className="px-6 py-4 font-bold text-slate-800">{rx.patientName}</td>
-                      <td className="px-6 py-4 text-slate-500">{rx.age} / {rx.gender}</td>
-                      <td className="px-6 py-4 text-slate-500">{rx.mobile}</td>
-                      <td className="px-6 py-4 text-slate-450 font-mono">{rx.date}</td>
-                      <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                    <div 
+                      key={rx.prescriptionId} 
+                      onClick={() => handleInspectPrescription(rx)}
+                      className="p-4 hover:bg-slate-50 transition cursor-pointer space-y-2.5 active:bg-slate-100"
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-mono font-bold text-slate-900 text-xs bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                          {rx.prescriptionId}
+                        </span>
+                        <span className="text-[10.5px] text-slate-400 font-mono font-bold">{rx.date}</span>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <h4 className="font-extrabold text-slate-800 text-xs">{rx.patientName}</h4>
+                        <p className="text-[11px] text-slate-550">
+                          {rx.age} Yrs / {rx.gender} • <span className="font-mono">{rx.mobile}</span>
+                        </p>
+                      </div>
+                      
+                      <div className="flex justify-end pt-1">
                         <button
-                          onClick={() => handleInspectPrescription(rx)}
-                          className="text-amber-600 font-bold text-xs opacity-80 hover:opacity-100 hover:underline transition-opacity px-2 py-1 rounded"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleInspectPrescription(rx);
+                          }}
+                          className="px-3.5 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 rounded-xl text-[10.5px] font-black uppercase tracking-wider transition"
                         >
-                          Inspect Rx
+                          Inspect Rx →
                         </button>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </>
             )}
           </div>
         </div>
