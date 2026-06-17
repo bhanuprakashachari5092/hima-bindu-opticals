@@ -1385,11 +1385,11 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                 )}
               </div>
             ) : (
-              <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center text-slate-450 font-bold flex flex-col items-center justify-center h-full min-h-[300px]">
-                <Glasses className="w-12 h-12 text-slate-300 mb-4 animate-bounce" />
-                <p className="text-xs uppercase tracking-wider">No Patient Selected</p>
-                <p className="text-[11px] text-slate-400 mt-1 font-normal max-w-[200px]">
-                  Select a patient record from the queue to manage their spectacles and lens configurations.
+              <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center text-gray-400 shadow-2xs space-y-3.5 h-full flex flex-col items-center justify-center min-h-[350px]">
+                <Glasses className="w-14 h-14 text-gray-300 mx-auto animate-bounce" />
+                <h4 className="font-extrabold text-gray-700 text-sm">Clinical Registry Standby</h4>
+                <p className="text-xs max-w-sm mx-auto leading-normal">
+                  Choose a registered spectacle prescription document from the search archive on the left to verify refraction metrics and launch printable letterheads.
                 </p>
               </div>
             )}

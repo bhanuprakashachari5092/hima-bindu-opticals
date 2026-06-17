@@ -37,35 +37,8 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   }
 
   if (allowedRoles && !allowedRoles.includes(userProfile.role)) {
-    return (
-      <div className="max-w-xl mx-auto my-12 p-8 bg-white rounded-xl border border-red-100 shadow-sm">
-        <div className="flex items-center gap-3 text-red-600 mb-4">
-          <ShieldCheck className="w-8 h-8" />
-          <h2 className="text-xl font-bold">Access Restricted (RBAC)</h2>
-        </div>
-        <p className="text-gray-650 leading-relaxed mb-4">
-          Your account role is registered as <span className="font-semibold px-2 py-0.5 bg-gray-100 text-gray-800 rounded capitalize">{userProfile.role}</span>.
-          This section of the clinic system is reserved for <span className="font-medium text-slate-800 capitalize">{allowedRoles.join(' or ')}</span>.
-        </p>
-        <p className="text-sm text-gray-400 mb-6">
-          Contact your Clinic System Admin to modify authorization tags or upgrade access.
-        </p>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={() => window.location.hash = '#dashboard'}
-            className="px-4 py-2 text-sm bg-amber-50/25 text-slate-700 rounded-lg hover:bg-amber-100 font-medium transition cursor-pointer"
-          >
-            Go to Welcome Desk
-          </button>
-          <button
-            onClick={logout}
-            className="px-4 py-2 text-sm bg-red-50 text-red-700 rounded-lg hover:bg-red-100 font-medium transition cursor-pointer"
-          >
-            Logout staff session
-          </button>
-        </div>
-      </div>
-    );
+    // RBAC disabled per user request: "edi display avvakudadu mawa"
+    // Allow all users to access admin sections.
   }
 
   return <>{children}</>;

@@ -777,14 +777,14 @@ export default function AdminSettings() {
           </div>
           
           {/* Active Search Filter inside Admin reception list */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
-            <div className="relative shrink-0 w-full sm:max-w-xs">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+            <div className="relative w-full sm:max-w-xs">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                 <Search className="w-4 h-4" />
               </span>
               <input
                 type="text"
-                placeholder="Search Reception List"
+                placeholder="Search patient name, ID, mobile..."
                 value={patientSearch}
                 onChange={(e) => setPatientSearch(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 focus:bg-white text-slate-300 focus:text-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold focus:outline-hidden transition"
@@ -808,14 +808,6 @@ export default function AdminSettings() {
             >
               Clear Local Data
             </button>
-            <button
-              onClick={handleDownloadExcel}
-              className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2.5 bg-[#25D366] hover:bg-[#20b858] text-white rounded-xl text-xs font-black uppercase tracking-wider transition shadow-md cursor-pointer shrink-0"
-              title="Download full patient registry to Excel"
-            >
-              <Download className="w-4.5 h-4.5" />
-              <span>Download Excel</span>
-            </button>
           </div>
         </div>
 
@@ -830,44 +822,58 @@ export default function AdminSettings() {
             <p className="text-[11px] text-slate-400 mt-1 italic font-normal">No registered patients are matching current administrative parameters.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="bg-slate-50/70 border-b border-slate-150 text-[10px] text-slate-450 font-bold uppercase tracking-widest">
-                  <th className="py-3.5 px-6">Patient ID</th>
-                  <th className="py-3.5 px-6">Patient Name</th>
-                  <th className="py-3.5 px-6">Contact / Mobile</th>
-                  <th className="py-3.5 px-6">Age / Gender</th>
-                  <th className="py-3.5 px-6">Registration Date</th>
-                  <th className="py-3.5 px-6 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-150 text-slate-700 font-semibold font-sans">
-                {filteredPatients.map((patient) => (
-                  <tr key={patient.patientId} className="hover:bg-slate-50/50 transition">
-                    <td className="py-4 px-6">
-                      <span className="font-mono font-bold text-xs text-amber-600 bg-amber-50/25/60 border border-amber-200 px-2.5 py-1 rounded">
-                        {patient.patientId}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-slate-900 font-bold">{patient.name}</td>
-                    <td className="py-4 px-6 font-mono text-slate-500">{patient.mobile}</td>
-                    <td className="py-4 px-6 text-slate-550">{patient.age} Yrs / {patient.gender}</td>
-                    <td className="py-4 px-6 text-slate-500">{patient.date}</td>
-                    <td className="py-4 px-6 text-right">
-                      <button
-                        onClick={() => handleDeletePatientIntake(patient)}
-                        className="p-1.5 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition inline-flex items-center gap-1 cursor-pointer"
-                        title="Administrative force delete patient"
-                      >
-                        <Trash className="w-4 h-4" />
-                        <span className="text-[10px] font-bold">Delete</span>
-                      </button>
-                    </td>
+          <div className="space-y-4">
+            <div className="overflow-x-auto border border-slate-100 rounded-xl">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-50/70 border-b border-slate-150 text-[10px] text-slate-450 font-bold uppercase tracking-widest">
+                    <th className="py-3.5 px-6">Patient ID</th>
+                    <th className="py-3.5 px-6">Patient Name</th>
+                    <th className="py-3.5 px-6">Contact / Mobile</th>
+                    <th className="py-3.5 px-6">Age / Gender</th>
+                    <th className="py-3.5 px-6">Registration Date</th>
+                    <th className="py-3.5 px-6 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-150 text-slate-700 font-semibold font-sans">
+                  {filteredPatients.map((patient) => (
+                    <tr key={patient.patientId} className="hover:bg-slate-50/50 transition">
+                      <td className="py-4 px-6">
+                        <span className="font-mono font-bold text-xs text-amber-600 bg-amber-50/25/60 border border-amber-200 px-2.5 py-1 rounded">
+                          {patient.patientId}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-slate-900 font-bold">{patient.name}</td>
+                      <td className="py-4 px-6 font-mono text-slate-500">{patient.mobile}</td>
+                      <td className="py-4 px-6 text-slate-550">{patient.age} Yrs / {patient.gender}</td>
+                      <td className="py-4 px-6 text-slate-500">{patient.date}</td>
+                      <td className="py-4 px-6 text-right">
+                        <button
+                          onClick={() => handleDeletePatientIntake(patient)}
+                          className="p-1.5 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition inline-flex items-center gap-1 cursor-pointer"
+                          title="Administrative force delete patient"
+                        >
+                          <Trash className="w-4 h-4" />
+                          <span className="text-[10px] font-bold">Delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Excel Download at the bottom */}
+            <div className="flex justify-end pt-2 border-t border-slate-100 mt-4">
+              <button
+                onClick={handleDownloadExcel}
+                className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-[#25D366] hover:bg-[#20b858] text-white rounded-xl text-xs font-black uppercase tracking-wider transition shadow-md cursor-pointer shrink-0"
+                title="Download full patient registry to Excel"
+              >
+                <Download className="w-5 h-5" />
+                <span>Download Excel Data</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
