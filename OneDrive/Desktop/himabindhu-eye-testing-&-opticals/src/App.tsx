@@ -81,13 +81,14 @@ function TerminalConsole() {
         <Dashboard 
           setActiveTab={setActiveTab} 
           setSelectedPrescriptionForView={setSelectedRxFromOutside} 
+          setPrefilledPatient={setPrefilledPatient}
         />
       )}
 
 
 
       {activeTab === 'prescription' && (
-        <ProtectedRoute allowedRoles={['admin', 'doctor']}>
+        <ProtectedRoute allowedRoles={['doctor']}>
           <PrescriptionEntry 
             prefilledPatient={prefilledPatient} 
             clearPrefilledPatient={() => setPrefilledPatient(null)} 

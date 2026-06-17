@@ -1,20 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth, UserRole } from '../context/AuthContext';
-import { 
-  collection, 
-  getDocs, 
-  query, 
-  orderBy, 
-  limit, 
-  where,
-  doc,
-  setDoc,
-  deleteDoc,
-  serverTimestamp,
-  updateDoc
-} from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../config/firebase';
-import { Prescription } from '../components/PrescriptionPDF';
+import { Prescription, printPrescriptionHTML } from '../components/PrescriptionPDF';
+import { generateNextPatientId, generateNextPrescriptionId } from '../utils/idGenerators';
 import { 
   Users, 
   TrendingUp, 
@@ -36,12 +23,15 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby6GwqVZVNk4vR9wsMN8PMqZW-hsJuscR5JscUfNMf7pTdC7ykcrrONURgIM2p0qcHO/exec";
+
 interface DashboardProps {
   setActiveTab: (tab: string) => void;
   setSelectedPrescriptionForView: (rx: Prescription | null) => void;
+  setPrefilledPatient?: (patient: any) => void;
 }
 
-export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView }: DashboardProps) {
+export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView, setPrefilledPatient }: DashboardProps) {
   const { userProfile, isDemoMode } = useAuth();
   const [metrics, setMetrics] = useState({
     todayCount: 0,
@@ -51,6 +41,19 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
 
   const [recentPrescriptions, setRecentPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Patients list for queues
+  const [patientsList, setPatientsList] = useState<any[]>([]);
+
+  // Receptionist Patient Registration States
+  const [regName, setRegName] = useState('');
+  const [regMobile, setRegMobile] = useState('');
+  const [regAge, setRegAge] = useState('');
+  const [regGender, setRegGender] = useState('Male');
+  const [nextPatientId, setNextPatientId] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [receptionTab, setReceptionTab] = useState<'orders' | 'register'>('orders');
+  const [registeredPatientForWhatsApp, setRegisteredPatientForWhatsApp] = useState<any | null>(null);
 
   // Receptionist States
   const [allPrescriptions, setAllPrescriptions] = useState<Prescription[]>([]);
@@ -62,91 +65,303 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
   const [orderStatus, setOrderStatus] = useState<'Pending' | 'Ready'>('Pending');
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [isOrderSent, setIsOrderSent] = useState(false);
+  
+  // Custom cost states
+  const [actualCost, setActualCost] = useState('');
+  const [receivedCost, setReceivedCost] = useState('');
+  const [balanceCost, setBalanceCost] = useState('');
+
+  // Refraction power states for the wizard
+  const [reSphDist, setReSphDist] = useState('');
+  const [reCylDist, setReCylDist] = useState('');
+  const [reAxisDist, setReAxisDist] = useState('');
+  const [reVisionDist, setReVisionDist] = useState('6/6');
+  const [reVisionNear, setReVisionNear] = useState('J1');
+  const [reAdd, setReAdd] = useState('');
+
+  const [leSphDist, setLeSphDist] = useState('');
+  const [leCylDist, setLeCylDist] = useState('');
+  const [leAxisDist, setLeAxisDist] = useState('');
+  const [leVisionDist, setLeVisionDist] = useState('6/6');
+  const [leVisionNear, setLeVisionNear] = useState('J1');
+  const [leAdd, setLeAdd] = useState('');
+
+  const [pd, setPd] = useState('');
+  const [notes, setNotes] = useState('');
+  const [selectedAdvice, setSelectedAdvice] = useState<string[]>([]);
+  
+  const [workflowStep, setWorkflowStep] = useState<'input' | 'print' | 'whatsapp'>('input');
 
   useEffect(() => {
     async function loadDashboardData() {
       setLoading(true);
       const todayString = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-      if (isDemoMode) {
-        // Load offline demo data
+      let patients = [];
+      let rxList: Prescription[] = [];
+      let loadedFromSheets = false;
+
+      // 1. Instant Load from LocalStorage for Speed (Stale-While-Revalidate)
+      const storedPatients = localStorage.getItem('hb_demo_patients');
+      const storedRx = localStorage.getItem('hb_demo_prescriptions');
+      let foundLocalData = false;
+      if (storedPatients) {
+        try {
+          const p = JSON.parse(storedPatients);
+          if (p.length > 0) {
+            setPatientsList(p.sort((a: any, b: any) => b.patientId.localeCompare(a.patientId)));
+            foundLocalData = true;
+          }
+        } catch (e) {}
+      }
+      if (storedRx) {
+        try {
+          const r = JSON.parse(storedRx);
+          if (r.length > 0) {
+            setAllPrescriptions(r.sort((a: any, b: any) => b.prescriptionId.localeCompare(a.prescriptionId)));
+            foundLocalData = true;
+          }
+        } catch (e) {}
+      }
+      if (foundLocalData) {
+        setLoading(false);
+      }
+
+      const mapPatient = (item: any) => ({
+        patientId: item['Patient ID'] || item.patientId || '',
+        name: item['Patient Name'] || item.name || '',
+        mobile: item['Mobile'] || item.mobile || '',
+        age: item['Age'] || item.age || '',
+        gender: item['Gender'] || item.gender || '',
+        date: item['Date'] || item.date || ''
+      });
+
+      const mapPrescription = (item: any) => ({
+        prescriptionId: item['Prescription ID'] || item.prescriptionId || '',
+        patientId: item['Patient ID'] || item.patientId || '',
+        patientName: item['Patient Name'] || item.patientName || '',
+        mobile: item['Mobile'] || item.mobile || '',
+        age: item['Age'] || item.age || '',
+        gender: item['Gender'] || item.gender || '',
+        date: item['Date'] || item.date || '',
+        rightEyeData: {
+          distance: { sph: item['RE SPH'] || '', cyl: item['RE CYL'] || '', axis: item['RE AXIS'] || '', vision: item['RE Vision'] || '' },
+          near: { sph: '', cyl: '', axis: '', vision: item['RE Near Vision'] || '' },
+          add: item['RE Add'] || ''
+        },
+        leftEyeData: {
+          distance: { sph: item['LE SPH'] || '', cyl: item['LE CYL'] || '', axis: item['LE AXIS'] || '', vision: item['LE Vision'] || '' },
+          near: { sph: '', cyl: '', axis: '', vision: item['LE Near Vision'] || '' },
+          add: item['LE Add'] || ''
+        },
+        pd: item['PD'] || '',
+        advice: item['Advice'] ? item['Advice'].toString().split(',').map((s: string) => s.trim()) : [],
+        notes: item['Notes'] || '',
+        frameName: item['Frame Name'] || '',
+        lensType: item['Lens Type'] || '',
+        actualCost: item['Actual Cost'] || '',
+        receivedCost: item['Received Amount'] || '',
+        balanceCost: item['Balance Amount'] || '',
+        orderStatus: item['Delivery Status'] || 'Pending',
+        isPlaceholder: false
+      });
+
+      try {
+        const resPatients = await fetch(`${APPS_SCRIPT_URL}?action=getPatients`);
+        if (resPatients.ok) {
+          const jsonPatients = await resPatients.json();
+          if (Array.isArray(jsonPatients)) {
+            patients = jsonPatients.map(mapPatient);
+            localStorage.setItem('hb_demo_patients', JSON.stringify(patients));
+            loadedFromSheets = true;
+          } else if (jsonPatients.success && Array.isArray(jsonPatients.data)) {
+            patients = jsonPatients.data.map(mapPatient);
+            localStorage.setItem('hb_demo_patients', JSON.stringify(patients));
+            loadedFromSheets = true;
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch patients from Google Sheets. Using localStorage fallback.", err);
+      }
+
+      try {
+        const resRx = await fetch(`${APPS_SCRIPT_URL}?action=getPrescriptions`);
+        if (resRx.ok) {
+          const jsonRx = await resRx.json();
+          if (Array.isArray(jsonRx)) {
+            rxList = jsonRx.map(mapPrescription);
+            localStorage.setItem('hb_demo_prescriptions', JSON.stringify(rxList));
+            loadedFromSheets = true;
+          } else if (jsonRx.success && Array.isArray(jsonRx.data)) {
+            rxList = jsonRx.data.map(mapPrescription);
+            localStorage.setItem('hb_demo_prescriptions', JSON.stringify(rxList));
+            loadedFromSheets = true;
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch prescriptions from Google Sheets. Using localStorage fallback.", err);
+      }
+
+      if (!loadedFromSheets) {
         const demoPatientsStr = localStorage.getItem('hb_demo_patients') || '[]';
         const demoRxStr = localStorage.getItem('hb_demo_prescriptions') || '[]';
-        
         try {
-          const patients = JSON.parse(demoPatientsStr);
-          const rxList = JSON.parse(demoRxStr) as Prescription[];
-
-          // Today count
-          const todayPatients = patients.filter((p: any) => p.date === todayString).length;
-          // Month count (approximate since first day of month)
-          const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-          const monthlyPatients = patients.filter((p: any) => new Date(p.date) >= firstOfMonth).length;
-
-          setMetrics({
-            todayCount: todayPatients || patients.length,
-            totalCount: patients.length,
-            monthlyCount: monthlyPatients || patients.length
-          });
-
-          // Sorted prescriptions
-          const sortedRx = [...rxList].sort((a, b) => b.prescriptionId.localeCompare(a.prescriptionId));
-          setRecentPrescriptions(sortedRx.slice(0, 5));
-          setAllPrescriptions(sortedRx);
+          patients = JSON.parse(demoPatientsStr);
+          rxList = JSON.parse(demoRxStr) as Prescription[];
         } catch (e) {
-          console.error("Demo parsing error", e);
+          console.error("Local data parsing error", e);
         }
-        setLoading(false);
-        return;
       }
 
-      // Live Firestore load
       try {
-        const patientsRef = collection(db, 'patients');
-        const prescriptionsRef = collection(db, 'prescriptions');
+        setPatientsList(patients.sort((a: any, b: any) => b.patientId.localeCompare(a.patientId)));
 
-        // Fetch all patients
-        const patientsSnap = await getDocs(patientsRef).catch(err => 
-          handleFirestoreError(err, OperationType.LIST, 'patients')
-        );
-        const totalPatients = patientsSnap ? patientsSnap.size : 0;
-
-        // Fetch today's patients query
-        const qToday = query(patientsRef, where('createdAt', '>=', new Date(new Date().setHours(0,0,0,0))));
-        const todaySnap = await getDocs(qToday).catch(() => null);
-        const todayCount = todaySnap ? todaySnap.size : 0;
-
-        // Fetch monthly count query (since first day of month)
-        const qMonth = query(patientsRef, where('createdAt', '>=', new Date(new Date().setDate(1))));
-        const monthSnap = await getDocs(qMonth).catch(() => null);
-        const monthlyCount = monthSnap ? monthSnap.size : 0;
+        const todayPatients = patients.filter((p: any) => p.date === todayString).length;
+        const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const monthlyPatients = patients.filter((p: any) => new Date(p.date) >= firstOfMonth).length;
 
         setMetrics({
-          todayCount: todayCount || totalPatients,
-          totalCount: totalPatients,
-          monthlyCount: monthlyCount || totalPatients
+          todayCount: todayPatients || patients.length,
+          totalCount: patients.length,
+          monthlyCount: monthlyPatients || patients.length
         });
 
-        // Load recent prescriptions
-        const rxSnap = await getDocs(prescriptionsRef).catch((err) => {
-          return getDocs(prescriptionsRef);
-        });
-
-        if (rxSnap) {
-          const rawRx = rxSnap.docs.map(doc => ({ ...doc.data() }) as Prescription);
-          const sortedList = rawRx.sort((a, b) => b.prescriptionId.localeCompare(a.prescriptionId));
-          setRecentPrescriptions(sortedList.slice(0, 5));
-          setAllPrescriptions(sortedList);
-        }
-      } catch (error) {
-        console.error("Firestore dashboard load error", error);
-      } finally {
-        setLoading(false);
+        const sortedRx = [...rxList].sort((a, b) => b.prescriptionId.localeCompare(a.prescriptionId));
+        setRecentPrescriptions(sortedRx.slice(0, 5));
+        setAllPrescriptions(sortedRx);
+      } catch (e) {
+        console.error("Error setting dashboard data states:", e);
       }
+      setLoading(false);
     }
 
     loadDashboardData();
-  }, [isDemoMode, userProfile]);
+  }, [userProfile]);
+
+  useEffect(() => {
+    async function loadNextId() {
+      if (userProfile?.role === 'receptionist') {
+        const nextId = await generateNextPatientId(true);
+        setNextPatientId(nextId);
+      }
+    }
+    loadNextId();
+  }, [userProfile]);
+
+  const handleRegisterPatient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regName.trim() || !regMobile.trim() || !regAge.trim()) {
+      alert("Please enter Name, Mobile, and Age.");
+      return;
+    }
+    setIsRegistering(true);
+    try {
+      const generatedId = await generateNextPatientId(true);
+      const generatedRxId = await generateNextPrescriptionId(true);
+      const todayString = new Date().toISOString().split('T')[0];
+      const newPatient = {
+        patientId: generatedId,
+        name: regName.trim(),
+        mobile: regMobile.trim(),
+        age: parseInt(regAge, 10),
+        gender: regGender,
+        date: todayString
+      };
+
+      const stored = localStorage.getItem('hb_demo_patients') || '[]';
+      const current = JSON.parse(stored);
+      current.push(newPatient);
+      localStorage.setItem('hb_demo_patients', JSON.stringify(current));
+      
+      const blankRx: Prescription = {
+        prescriptionId: generatedRxId,
+        patientId: generatedId,
+        patientName: regName.trim(),
+        mobile: regMobile.trim(),
+        age: parseInt(regAge, 10),
+        gender: regGender,
+        date: todayString,
+        rightEyeData: {
+          distance: { sph: "", cyl: "", axis: "", vision: "6/6" },
+          near: { sph: "", cyl: "", axis: "", vision: "J1" },
+          add: ""
+        },
+        leftEyeData: {
+          distance: { sph: "", cyl: "", axis: "", vision: "6/6" },
+          near: { sph: "", cyl: "", axis: "", vision: "J1" },
+          add: ""
+        },
+        pd: "",
+        advice: [],
+        notes: "",
+        frameName: "",
+        lensType: "",
+        actualCost: "",
+        receivedCost: "",
+        balanceCost: "",
+        orderStatus: "Pending",
+        isPlaceholder: true
+      } as any;
+      
+      const storedRx = localStorage.getItem('hb_demo_prescriptions') || '[]';
+      const currentRx = JSON.parse(storedRx);
+      currentRx.push(blankRx);
+      localStorage.setItem('hb_demo_prescriptions', JSON.stringify(currentRx));
+
+      setPatientsList(current.sort((a: any, b: any) => b.patientId.localeCompare(a.patientId)));
+      setAllPrescriptions(currentRx.sort((a: any, b: any) => b.prescriptionId.localeCompare(a.prescriptionId)));
+      setMetrics(prev => ({
+        ...prev,
+        todayCount: current.filter((p: any) => p.date === todayString).length,
+        totalCount: current.length
+      }));
+
+      // POST to Google Sheets
+      try {
+        await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'savePrescription',
+            patientId: newPatient.patientId,
+            prescriptionId: generatedRxId,
+            patientName: newPatient.name,
+            mobile: newPatient.mobile,
+            age: newPatient.age,
+            gender: newPatient.gender,
+            date: newPatient.date,
+            // Blank eyesight data
+            reDistanceSph: "", reDistanceCyl: "", reDistanceAxis: "", reDistanceVision: "6/6",
+            reNearSph: "", reNearCyl: "", reNearAxis: "", reNearVision: "J1", reAdd: "",
+            leDistanceSph: "", leDistanceCyl: "", leDistanceAxis: "", leDistanceVision: "6/6",
+            leNearSph: "", leNearCyl: "", leNearAxis: "", leNearVision: "J1", leAdd: "",
+            pd: "", advice: "", notes: ""
+          })
+        });
+      } catch (sheetErr) {
+        console.warn("Failed to POST registered patient to Google Sheets:", sheetErr);
+      }
+
+      setRegisteredPatientForWhatsApp(newPatient);
+
+      setRegName('');
+      setRegMobile('');
+      setRegAge('');
+      setRegGender('Male');
+
+      // Trigger next ID load
+      const nextId = await generateNextPatientId(true);
+      setNextPatientId(nextId);
+      
+      setReceptionTab('orders');
+    } catch (err) {
+      console.error("Failed to register patient:", err);
+      alert("Error registering patient.");
+    } finally {
+      setIsRegistering(false);
+    }
+  };
 
   const handleInspectPrescription = (rx: Prescription) => {
     setSelectedPrescriptionForView(rx);
@@ -156,10 +371,41 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
   const handleSelectRx = (rx: Prescription) => {
     setSelectedRx(rx);
     setFrameName(rx.frameName || '');
-    setLensType(rx.lensType || '');
+    // Automatically set the lens type to whatever the doctor advised if not already set manually
+    const adviceText = Array.isArray(rx.advice) ? rx.advice.join(', ') : (rx.advice || '');
+    setLensType(rx.lensType || adviceText);
     setOrderPrice(rx.orderPrice || '');
     setOrderStatus(rx.orderStatus || 'Pending');
     setIsOrderSent(rx.isOrderSent || false);
+
+    // Initialize costs
+    const act = rx.actualCost || rx.orderPrice || '';
+    const rec = rx.receivedCost || '';
+    const bal = rx.balanceCost || (act && rec ? String((parseFloat(act) || 0) - (parseFloat(rec) || 0)) : '');
+    setActualCost(act);
+    setReceivedCost(rec);
+    setBalanceCost(bal);
+
+    // Initialize refraction powers
+    setReSphDist(rx.rightEyeData?.distance?.sph || '');
+    setReCylDist(rx.rightEyeData?.distance?.cyl || '');
+    setReAxisDist(rx.rightEyeData?.distance?.axis || '');
+    setReVisionDist(rx.rightEyeData?.distance?.vision || '6/6');
+    setReVisionNear(rx.rightEyeData?.near?.vision || 'J1');
+    setReAdd(rx.rightEyeData?.add || '');
+
+    setLeSphDist(rx.leftEyeData?.distance?.sph || '');
+    setLeCylDist(rx.leftEyeData?.distance?.cyl || '');
+    setLeAxisDist(rx.leftEyeData?.distance?.axis || '');
+    setLeVisionDist(rx.leftEyeData?.distance?.vision || '6/6');
+    setLeVisionNear(rx.leftEyeData?.near?.vision || 'J1');
+    setLeAdd(rx.leftEyeData?.add || '');
+
+    setPd(rx.pd || '');
+    setNotes(rx.notes || '');
+    setSelectedAdvice(rx.advice || []);
+    
+    setWorkflowStep('input');
 
     // Auto-scroll to customizer desk on mobile screens
     if (window.innerWidth < 1024) {
@@ -169,31 +415,78 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     }
   };
 
+  const handleDeletePatientFromQueue = (patientId: string) => {
+    const confirmDelete = window.confirm("Are you sure you want to remove this patient from the welcome desk queue?");
+    if (!confirmDelete) return;
+
+    try {
+      const stored = localStorage.getItem('hb_demo_patients') || '[]';
+      const parsed = JSON.parse(stored) as any[];
+      const updated = parsed.filter(p => p.patientId !== patientId);
+      localStorage.setItem('hb_demo_patients', JSON.stringify(updated));
+      setPatientsList(updated);
+
+      // Refresh metrics
+      const todayString = new Date().toISOString().split('T')[0];
+      const todayPatients = updated.filter((p: any) => p.date === todayString).length;
+      const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      const monthlyPatients = updated.filter((p: any) => new Date(p.date) >= firstOfMonth).length;
+
+      setMetrics({
+        todayCount: todayPatients || updated.length,
+        totalCount: updated.length,
+        monthlyCount: monthlyPatients || updated.length
+      });
+
+      // POST deletion to Google Sheets
+      try {
+        fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'deletePatient',
+            patientId: patientId
+          })
+        });
+      } catch (sheetErr) {
+        console.warn("Failed to delete patient from Google Sheets queue:", sheetErr);
+      }
+    } catch (e) {
+      console.error("Failed to delete patient from queue:", e);
+    }
+  };
+
   const syncOrderToGoogleSheet = async (rx: Prescription, updatedData: any) => {
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyxeBKUjjpG7InOmRAHTAEcExQKt3chvyIN7MkO4pZYwID4uWs7uZCjiPG-0cHPlkg/exec";
-
-    const formatPower = (eyeData: any) => {
-      if (!eyeData) return "—";
-      const dist = eyeData.distance || {};
-      const near = eyeData.near || {};
-      const addVal = eyeData.add ? `, Add: ${eyeData.add}` : "";
-      return `[Dist] Sph: ${dist.sph || "Nil"}, Cyl: ${dist.cyl || "Nil"}, Axis: ${dist.axis || "Nil"} | [Near] Sph: ${near.sph || "Nil"}, Cyl: ${near.cyl || "Nil"}${addVal}`;
-    };
-
     const payload = {
-      type: "order",
-      patientId: rx.patientId,
+      action: "saveOrder",
       prescriptionId: rx.prescriptionId,
-      patientName: rx.patientName,
-      mobile: rx.mobile,
-      frameName: updatedData.frameName,
-      lensType: updatedData.lensType,
-      orderPrice: updatedData.orderPrice,
-      orderStatus: updatedData.orderStatus,
-      isOrderSent: updatedData.isOrderSent || false,
-      isNotified: updatedData.isNotified || false,
-      rePower: formatPower(rx.rightEyeData),
-      lePower: formatPower(rx.leftEyeData)
+      patientId: rx.patientId, // Added so Google Sheets can find the row if prescriptionId is PENDING
+      orderData: {
+        frameName: updatedData.frameName,
+        lensType: updatedData.lensType,
+        orderPrice: updatedData.orderPrice,
+        orderStatus: updatedData.orderStatus,
+        isOrderSent: updatedData.isOrderSent || false,
+        isNotified: updatedData.isNotified || false,
+        actualCost: updatedData.actualCost || "",
+        receivedCost: updatedData.receivedCost || "",
+        balanceCost: updatedData.balanceCost || "",
+        reSphDist: rx.rightEyeData?.distance?.sph || "",
+        reCylDist: rx.rightEyeData?.distance?.cyl || "",
+        reAxisDist: rx.rightEyeData?.distance?.axis || "",
+        reVisionDist: rx.rightEyeData?.distance?.vision || "",
+        reVisionNear: rx.rightEyeData?.near?.vision || "",
+        reAdd: rx.rightEyeData?.add || "",
+        leSphDist: rx.leftEyeData?.distance?.sph || "",
+        leCylDist: rx.leftEyeData?.distance?.cyl || "",
+        leAxisDist: rx.leftEyeData?.distance?.axis || "",
+        leVisionDist: rx.leftEyeData?.distance?.vision || "",
+        leVisionNear: rx.leftEyeData?.near?.vision || "",
+        leAdd: rx.leftEyeData?.add || "",
+        pd: rx.pd || "",
+        notes: rx.notes || ""
+      }
     };
 
     try {
@@ -222,22 +515,36 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
           };
           makeRequest(APPS_SCRIPT_URL);
         } catch (err) {
-          fetch(APPS_SCRIPT_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+          try {
+            await fetch(APPS_SCRIPT_URL, {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "text/plain;charset=utf-8" },
+              body: JSON.stringify(payload),
+              signal: controller.signal
+            });
+          } finally {
+            clearTimeout(timeoutId);
+          }
         }
       } else {
-        fetch(APPS_SCRIPT_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+        try {
+          await fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: {
+              "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
       }
       console.log("Synced order to Google Sheets successfully.");
     } catch (error) {
@@ -249,61 +556,72 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     if (!selectedRx) return;
     setIsUpdatingOrder(true);
 
-    const hasChanges = 
-      frameName.trim() !== (selectedRx.frameName || '') ||
-      lensType.trim() !== (selectedRx.lensType || '') ||
-      orderPrice.trim() !== (selectedRx.orderPrice || '');
+    try {
+      const updatedRightData = {
+        distance: { sph: reSphDist, cyl: reCylDist, axis: reAxisDist, vision: reVisionDist },
+        near: { sph: "", cyl: "", axis: "", vision: reVisionNear },
+        add: reAdd
+      };
 
-    const updatedData = {
-      frameName: frameName.trim(),
-      lensType: lensType.trim(),
-      orderStatus: orderStatus,
-      orderPrice: orderPrice.trim(),
-      isNotified: selectedRx.orderStatus === orderStatus ? (selectedRx.isNotified || false) : false,
-      isOrderSent: hasChanges ? false : (selectedRx.isOrderSent || false)
-    };
+      const updatedLeftData = {
+        distance: { sph: leSphDist, cyl: leCylDist, axis: leAxisDist, vision: leVisionDist },
+        near: { sph: "", cyl: "", axis: "", vision: leVisionNear },
+        add: leAdd
+      };
 
-    if (isDemoMode) {
+      const actVal = String(actualCost || "").trim();
+      const recVal = String(receivedCost || "").trim();
+      const balVal = String((parseFloat(actVal) || 0) - (parseFloat(recVal) || 0));
+
+      const updatedRx = {
+        ...selectedRx,
+        frameName: String(frameName || "").trim(),
+        lensType: String(lensType || "").trim(),
+        orderPrice: actVal || String(orderPrice || "").trim(),
+        orderStatus: orderStatus,
+        rightEyeData: updatedRightData,
+        leftEyeData: updatedLeftData,
+        pd: String(pd || "").trim(),
+        notes: String(notes || "").trim(),
+        advice: selectedAdvice,
+        actualCost: actVal,
+        receivedCost: recVal,
+        balanceCost: balVal
+      };
+
       const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
       const list = JSON.parse(stored) as Prescription[];
       const updatedList = list.map(rx => {
         if (rx.prescriptionId === selectedRx.prescriptionId) {
-          return { ...rx, ...updatedData };
+          return updatedRx;
         }
         return rx;
       });
       localStorage.setItem('hb_demo_prescriptions', JSON.stringify(updatedList));
       
-      const newSelected = { ...selectedRx, ...updatedData };
-      setSelectedRx(newSelected);
+      setSelectedRx(updatedRx);
       setAllPrescriptions(updatedList);
-      setRecentPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? newSelected : p));
-      setIsOrderSent(newSelected.isOrderSent || false);
-      
-      syncOrderToGoogleSheet(selectedRx, updatedData);
+      setRecentPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? updatedRx : p));
+      setIsOrderSent(false);
 
-      alert(`Spectacle Order for ${selectedRx.patientName} saved! Status: ${orderStatus}.`);
+      await syncOrderToGoogleSheet(updatedRx, {
+        frameName: frameName.trim(),
+        lensType: lensType.trim(),
+        orderPrice: actVal || orderPrice.trim(),
+        orderStatus: orderStatus,
+        isNotified: false,
+        isOrderSent: false,
+        actualCost: actVal,
+        receivedCost: recVal,
+        balanceCost: balVal
+      });
+
+      setWorkflowStep('whatsapp');
+    } catch (err) {
+      console.error("Save order failed", err);
+      alert("There was an error saving the order. Please check the inputs or try again.");
+    } finally {
       setIsUpdatingOrder(false);
-    } else {
-      try {
-        const rxRef = doc(db, 'prescriptions', selectedRx.prescriptionId);
-        await updateDoc(rxRef, updatedData);
-        
-        const newSelected = { ...selectedRx, ...updatedData };
-        setSelectedRx(newSelected);
-        setAllPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? newSelected : p));
-        setRecentPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? newSelected : p));
-        setIsOrderSent(newSelected.isOrderSent || false);
-        
-        syncOrderToGoogleSheet(selectedRx, updatedData);
-
-        alert(`Spectacle Order for ${selectedRx.patientName} updated in clinical database!`);
-      } catch (err) {
-        console.error("Failed to update prescription order:", err);
-        alert("Failed to update order details.");
-      } finally {
-        setIsUpdatingOrder(false);
-      }
     }
   };
 
@@ -312,67 +630,85 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     const cleanPhone = selectedRx.mobile.replace(/\D/g, '');
     const targetPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
     
+    const fmt = (v: string | undefined) => (v && v !== '—' && v !== '') ? v : '—';
     const msg = [
       `🏥 *Himabindhu Eye Testing & Opticals*`,
       `📍 Dharmavaram, Andhra Pradesh | 📞 9949334443`,
       ``,
-      `━━━━━━━━━━━━━━━━━━━━━━`,
-      `👓 *SPECTACLE ORDER CONFIRMATION*`,
-      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `✨✨✨✨✨✨✨✨`,
+      `👓 *ORDER & SPECTACLE PRESCRIPTION*`,
+      `✨✨✨✨✨✨✨✨`,
       ``,
       `👤 *Patient:* ${selectedRx.patientName}`,
       `🆔 *Patient ID:* ${selectedRx.patientId}`,
       `🔖 *Rx ID:* ${selectedRx.prescriptionId}`,
+      `🎂 *Age/Sex:* ${selectedRx.age} yrs / ${selectedRx.gender}`,
       ``,
-      `✨ *ORDER DETAILS:*`,
+      `👁️ *RIGHT EYE (OD):*`,
+      `*Distance:* SPH: ${fmt(reSphDist)} | CYL: ${fmt(reCylDist)} | AXIS: ${fmt(reAxisDist)}° | Vision: ${reVisionDist}`,
+      `*Near:* Vision: ${reVisionNear} | *ADD:* +${fmt(reAdd)}`,
+      ``,
+      `👁️ *LEFT EYE (OS):*`,
+      `*Distance:* SPH: ${fmt(leSphDist)} | CYL: ${fmt(leCylDist)} | AXIS: ${fmt(leAxisDist)}° | Vision: ${leVisionDist}`,
+      `*Near:* Vision: ${leVisionNear} | *ADD:* +${fmt(leAdd)}`,
+      pd ? `📏 *PD:* ${pd} mm` : null,
+      ``,
+      `✨ *SPECTACLES ORDER:*`,
       `📦 *Frame Selected:* ${frameName || '—'}`,
       `🔮 *Lens Type:* ${lensType || '—'}`,
-      orderPrice ? `💵 *Amount:* ₹${orderPrice}` : null,
-      `📊 *Status:* 🔴 Crafting in Progress (Pending)`,
+      actualCost ? `💵 *Actual Cost:* ₹${actualCost}` : null,
+      receivedCost ? `💰 *Received Amount:* ₹${receivedCost}` : null,
+      balanceCost ? `⚖️ *Balance Amount:* ₹${balanceCost}` : null,
+      `📊 *Status:* 🔴 Crafting in Progress`,
       ``,
-      `━━━━━━━━━━━━━━━━━━━━━━`,
-      `_We have started preparing your custom spectacles in our lab. We will notify you once they are ready for collection! Thank you! 🙏_`
+      `✨✨✨✨✨✨✨✨`,
+      `_We have started preparing your custom spectacles in our lab. Thank you! 🙏_`
     ].filter(v => v !== null).join('\n');
     
-    const updatedData = { isOrderSent: true };
-    const sheetData = {
+    const updatedData = {
+      isOrderSent: true,
       frameName: frameName.trim(),
       lensType: lensType.trim(),
-      orderPrice: orderPrice.trim(),
+      orderPrice: actualCost.trim() || orderPrice.trim(),
       orderStatus: orderStatus,
-      isNotified: selectedRx.isNotified || false,
-      isOrderSent: true
+      rightEyeData: {
+        distance: { sph: reSphDist, cyl: reCylDist, axis: reAxisDist, vision: reVisionDist },
+        near: { sph: "", cyl: "", axis: "", vision: reVisionNear },
+        add: reAdd
+      },
+      leftEyeData: {
+        distance: { sph: leSphDist, cyl: leCylDist, axis: leAxisDist, vision: leVisionDist },
+        near: { sph: "", cyl: "", axis: "", vision: leVisionNear },
+        add: leAdd
+      },
+      pd: pd.trim(),
+      notes: notes.trim(),
+      advice: selectedAdvice,
+      actualCost: actualCost.trim(),
+      receivedCost: receivedCost.trim(),
+      balanceCost: balanceCost.trim()
     };
 
-    if (isDemoMode) {
-      const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
-      const list = JSON.parse(stored) as Prescription[];
-      const updatedList = list.map(rx => {
-        if (rx.prescriptionId === selectedRx.prescriptionId) {
-          return { ...rx, ...updatedData };
-        }
-        return rx;
-      });
-      localStorage.setItem('hb_demo_prescriptions', JSON.stringify(updatedList));
-      setSelectedRx(prev => prev ? { ...prev, ...updatedData } : null);
-      setAllPrescriptions(updatedList);
-      setIsOrderSent(true);
-      syncOrderToGoogleSheet(selectedRx, sheetData);
-    } else {
-      try {
-        const rxRef = doc(db, 'prescriptions', selectedRx.prescriptionId);
-        await updateDoc(rxRef, updatedData);
-        setSelectedRx(prev => prev ? { ...prev, ...updatedData } : null);
-        setAllPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? { ...p, ...updatedData } : p));
-        setIsOrderSent(true);
-        syncOrderToGoogleSheet(selectedRx, sheetData);
-      } catch (err) {
-        console.error("Failed to update order sent status:", err);
+    const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
+    const list = JSON.parse(stored) as Prescription[];
+    const updatedList = list.map(rx => {
+      if (rx.prescriptionId === selectedRx.prescriptionId) {
+        return { ...rx, ...updatedData };
       }
-    }
+      return rx;
+    });
+    localStorage.setItem('hb_demo_prescriptions', JSON.stringify(updatedList));
+    setAllPrescriptions(updatedList);
+    setIsOrderSent(true);
+    
+    syncOrderToGoogleSheet(selectedRx, updatedData);
     
     const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
+
+    setSelectedRx(null);
+    setWorkflowStep('input');
+    alert("WhatsApp sent successfully! Order desk closed.");
   };
 
   const handleNotifyCollectionWhatsApp = async () => {
@@ -384,9 +720,9 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
       `🏥 *Himabindhu Eye Testing & Opticals*`,
       `📍 Dharmavaram, Andhra Pradesh | 📞 9949334443`,
       ``,
-      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `🥳🥳🥳🥳🥳🥳🥳🥳`,
       `🎉 *SPECTACLES READY FOR COLLECTION*`,
-      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `🥳🥳🥳🥳🥳🥳🥳🥳`,
       ``,
       `Dear *${selectedRx.patientName}*,`,
       `Your custom spectacles are fully crafted and ready for collection! 🥳`,
@@ -399,7 +735,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
       `📍 *Collection Point:* Himabindhu Opticals, Dharmavaram`,
       `📞 *Helpline:* 9949334443`,
       ``,
-      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `🥳🥳🥳🥳🥳🥳🥳🥳`,
       `_Please visit our clinic during working hours to collect your new spectacles. Thank you! 🙏_`
     ].join('\n');
     
@@ -413,30 +749,18 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
       isOrderSent: isOrderSent
     };
 
-    if (isDemoMode) {
-      const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
-      const list = JSON.parse(stored) as Prescription[];
-      const updatedList = list.map(rx => {
-        if (rx.prescriptionId === selectedRx.prescriptionId) {
-          return { ...rx, ...updatedData };
-        }
-        return rx;
-      });
-      localStorage.setItem('hb_demo_prescriptions', JSON.stringify(updatedList));
-      setSelectedRx(prev => prev ? { ...prev, ...updatedData } : null);
-      setAllPrescriptions(updatedList);
-      syncOrderToGoogleSheet(selectedRx, sheetData);
-    } else {
-      try {
-        const rxRef = doc(db, 'prescriptions', selectedRx.prescriptionId);
-        await updateDoc(rxRef, updatedData);
-        setSelectedRx(prev => prev ? { ...prev, ...updatedData } : null);
-        setAllPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? { ...p, ...updatedData } : p));
-        syncOrderToGoogleSheet(selectedRx, sheetData);
-      } catch (err) {
-        console.error("Failed to update notified status:", err);
+    const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
+    const list = JSON.parse(stored) as Prescription[];
+    const updatedList = list.map(rx => {
+      if (rx.prescriptionId === selectedRx.prescriptionId) {
+        return { ...rx, ...updatedData };
       }
-    }
+      return rx;
+    });
+    localStorage.setItem('hb_demo_prescriptions', JSON.stringify(updatedList));
+    setSelectedRx(prev => prev ? { ...prev, ...updatedData } : null);
+    setAllPrescriptions(updatedList);
+    syncOrderToGoogleSheet(selectedRx, sheetData);
     
     const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
@@ -466,88 +790,218 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left Panel: Prescription/Patient Queue */}
+          {/* Left Panel: Prescription/Patient Queue & Patient Registration */}
           <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-            <div className="p-5 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <Users className="w-5 h-5 text-teal-400" />
-                <h3 className="font-extrabold text-sm uppercase tracking-wider text-white">Patient Queue</h3>
+            {/* Header Tabs */}
+            <div className="bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReceptionTab('orders')}
+                  className={`px-4 py-2 text-xs font-extrabold uppercase tracking-wider rounded-xl transition ${
+                    receptionTab === 'orders' 
+                      ? 'bg-teal-600 text-white shadow-xs' 
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  Spectacle Queue
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setReceptionTab('register');
+                    const nextId = await generateNextPatientId(isDemoMode);
+                    setNextPatientId(nextId);
+                  }}
+                  className={`px-4 py-2 text-xs font-extrabold uppercase tracking-wider rounded-xl transition ${
+                    receptionTab === 'register' 
+                      ? 'bg-teal-600 text-white shadow-xs' 
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  Register New Patient
+                </button>
               </div>
-              
-              <div className="relative shrink-0 max-w-xs w-full">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                  <Search className="w-4 h-4" />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Search Patient Name, ID or Mobile..."
-                  value={receptionSearch}
-                  onChange={(e) => setReceptionSearch(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 focus:bg-white text-slate-300 focus:text-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs font-bold focus:outline-hidden transition"
-                />
-              </div>
+
+              {receptionTab === 'orders' && (
+                <div className="relative shrink-0 max-w-xs w-full">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                    <Search className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search Patient Name, ID or Mobile..."
+                    value={receptionSearch}
+                    onChange={(e) => setReceptionSearch(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 focus:bg-white text-slate-300 focus:text-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs font-bold focus:outline-hidden transition"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto max-h-[550px] divide-y divide-slate-100 min-h-[300px]">
-              {loading ? (
-                <div className="p-16 text-center text-slate-400 font-bold flex flex-col items-center justify-center">
-                  <div className="w-8 h-8 animate-spin border-4 border-teal-500 border-t-transparent rounded-full mb-3"></div>
-                  <p className="text-xs uppercase tracking-wider">Syncing queue records...</p>
-                </div>
-              ) : filteredRx.length === 0 ? (
-                <div className="p-16 text-center text-slate-450 font-semibold">
-                  <p className="text-xs uppercase tracking-wider">No matching registers found</p>
-                  <p className="text-[11px] text-slate-400 mt-1 italic font-normal">Check search spelling or add patient in clinical portal.</p>
-                </div>
-              ) : (
-                filteredRx.map((rx) => {
-                  const isSelected = selectedRx?.prescriptionId === rx.prescriptionId;
-                  const hasDetails = rx.frameName || rx.lensType;
-                  return (
-                    <div
-                      key={rx.prescriptionId}
-                      onClick={() => handleSelectRx(rx)}
-                      className={`p-4 transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                        isSelected ? 'bg-teal-50/45 border-l-4 border-teal-600' : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-slate-900 text-xs">{rx.patientName}</span>
-                          <span className="text-[9px] bg-slate-100 text-slate-600 font-mono px-1.5 py-0.5 rounded font-bold uppercase">
-                            {rx.prescriptionId}
-                          </span>
-                        </div>
-                        <p className="text-[10.5px] text-slate-500 font-medium">
-                          Mobile: <strong className="text-slate-600 font-semibold">{rx.mobile}</strong> | Age: {rx.age} Yrs ({rx.gender})
-                        </p>
-                        {hasDetails && (
-                          <p className="text-[10px] text-slate-450 mt-0.5">
-                            Specs: <span className="font-bold text-slate-600">{rx.frameName}</span> ({rx.lensType})
+              {receptionTab === 'orders' ? (
+                loading ? (
+                  <div className="p-16 text-center text-slate-400 font-bold flex flex-col items-center justify-center">
+                    <div className="w-8 h-8 animate-spin border-4 border-teal-500 border-t-transparent rounded-full mb-3"></div>
+                    <p className="text-xs uppercase tracking-wider">Syncing queue records...</p>
+                  </div>
+                ) : filteredRx.length === 0 ? (
+                  <div className="p-16 text-center text-slate-450 font-semibold">
+                    <p className="text-xs uppercase tracking-wider">No matching registers found</p>
+                    <p className="text-[11px] text-slate-400 mt-1 italic font-normal">Check search spelling or add patient in clinical portal.</p>
+                  </div>
+                ) : (
+                  filteredRx.map((rx) => {
+                    const isSelected = selectedRx?.prescriptionId === rx.prescriptionId;
+                    const hasDetails = rx.frameName || rx.lensType;
+                    return (
+                      <div
+                        key={rx.prescriptionId}
+                        onClick={() => handleSelectRx(rx)}
+                        className={`p-4 transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                          isSelected ? 'bg-teal-50/45 border-l-4 border-teal-600' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-slate-900 text-xs">{rx.patientName}</span>
+                            <span className="text-[9px] bg-slate-100 text-slate-600 font-mono px-1.5 py-0.5 rounded font-bold uppercase">
+                              {rx.prescriptionId}
+                            </span>
+                          </div>
+                          <p className="text-[10.5px] text-slate-500 font-medium">
+                            Mobile: <strong className="text-slate-600 font-semibold">{rx.mobile}</strong> | Age: {rx.age} Yrs ({rx.gender})
                           </p>
-                        )}
+                          {hasDetails && (
+                            <p className="text-[10px] text-slate-450 mt-0.5">
+                              Specs: <span className="font-bold text-slate-600">{rx.frameName}</span> ({rx.lensType})
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          {hasDetails ? (
+                            rx.orderStatus === 'Ready' ? (
+                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[9.5px] font-black uppercase tracking-wider">
+                                🟢 Ready
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[9.5px] font-black uppercase tracking-wider">
+                                🔴 Crafting
+                              </span>
+                            )
+                          ) : (
+                            <span className="px-2 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-md text-[9.5px] font-black uppercase tracking-wider">
+                              ⚪ Setup Order
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )
+              ) : (
+                <form onSubmit={handleRegisterPatient} className="p-6 space-y-5">
+                  <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 text-slate-800 space-y-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600">Register New Patient</h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Patient ID */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Patient ID (Auto-Generated)</label>
+                        <input
+                          type="text"
+                          value={nextPatientId || 'HB...'}
+                          disabled
+                          className="w-full border border-slate-200 bg-slate-100 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-500 cursor-not-allowed"
+                        />
                       </div>
 
-                      <div className="flex items-center gap-2 self-start sm:self-auto">
-                        {hasDetails ? (
-                          rx.orderStatus === 'Ready' ? (
-                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[9.5px] font-black uppercase tracking-wider">
-                              🟢 Ready
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[9.5px] font-black uppercase tracking-wider">
-                              🔴 Crafting
-                            </span>
-                          )
-                        ) : (
-                          <span className="px-2 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-md text-[9.5px] font-black uppercase tracking-wider">
-                            ⚪ Setup Order
-                          </span>
-                        )}
+                      {/* Patient Name */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Patient Full Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Banu Prakash"
+                          value={regName}
+                          onChange={(e) => setRegName(e.target.value)}
+                          required
+                          className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+                        />
+                      </div>
+
+                      {/* Phone Number */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-2">Mobile / Phone Number</label>
+                        <input
+                          type="tel"
+                          placeholder="e.g. 9949334443"
+                          value={regMobile}
+                          onChange={(e) => setRegMobile(e.target.value)}
+                          required
+                          pattern="[0-9]{10}"
+                          title="Please enter a 10-digit mobile number"
+                          className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+                        />
+                      </div>
+
+                      {/* Age & Gender */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Age</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 28"
+                            value={regAge}
+                            onChange={(e) => setRegAge(e.target.value)}
+                            required
+                            min="1"
+                            max="120"
+                            className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Gender</label>
+                          <select
+                            value={regGender}
+                            onChange={(e) => setRegGender(e.target.value)}
+                            className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+                          >
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
-                  );
-                })
+                  </div>
+
+                  <div className="flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setReceptionTab('orders')}
+                      className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isRegistering}
+                      className="px-5 py-2.5 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                    >
+                      {isRegistering ? (
+                        <>
+                          <div className="w-3.5 h-3.5 animate-spin border-2 border-white border-t-transparent rounded-full"></div>
+                          <span>Registering...</span>
+                        </>
+                      ) : (
+                        <span>Register Patient</span>
+                      )}
+                    </button>
+                  </div>
+                </form>
               )}
             </div>
           </div>
@@ -568,184 +1022,367 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                   </p>
                 </div>
 
-                <div className="space-y-4 pt-4 border-t border-slate-100">
-                  {/* Select Frame */}
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      Select Spectacle Frame
-                    </label>
-                    <input
-                      type="text"
-                      list="frame-suggestions"
-                      value={frameName}
-                      onChange={(e) => setFrameName(e.target.value)}
-                      placeholder="Type custom frame or select..."
-                      className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
-                    />
-                    <datalist id="frame-suggestions">
-                      <option value="Onyx Steel Rectangle" />
-                      <option value="Matte Wayfarer Rectangle" />
-                      <option value="Crystal Clear Round" />
-                      <option value="Rose Gold Wire Round" />
-                      <option value="Vintage Tortoise Cat-Eye" />
-                      <option value="Midnight Velvet Cat-Eye" />
-                      <option value="Executive Browline" />
-                      <option value="Havana Amber Oval" />
-                      <option value="Silver Whisper Oval" />
-                      <option value="Onyx Bold Square" />
-                      <option value="Classic Ebony Clubmaster" />
-                      <option value="Hexa-Bronze Geometric" />
-                      <option value="Maverick Gold Aviator" />
-                    </datalist>
-                  </div>
+                {workflowStep === 'input' && (
+                  <div className="space-y-4 pt-4 border-t border-slate-100">
+                    {/* Eyesight Details Section */}
+                    <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 space-y-4">
+                      <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2">
+                        <span className="w-1 h-3.5 bg-teal-600 rounded"></span>
+                        <h4 className="text-[10.5px] font-extrabold text-slate-800 uppercase tracking-wider">
+                          Ocular Refraction Details (Eyesight)
+                        </h4>
+                      </div>
 
-                  {/* Select Lens */}
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      Select Lens Type
-                    </label>
-                    <input
-                      type="text"
-                      list="lens-suggestions"
-                      value={lensType}
-                      onChange={(e) => setLensType(e.target.value)}
-                      placeholder="Type custom lens or select..."
-                      className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
-                    />
-                    <datalist id="lens-suggestions">
-                      <option value="Single Vision" />
-                      <option value="Bifocal" />
-                      <option value="Progressive" />
-                      <option value="Blue Cut" />
-                      <option value="Blue Light Transitions" />
-                      <option value="Anti-glare HMC" />
-                      <option value="Hard Coat (HC)" />
-                    </datalist>
-                  </div>
+                      <div className="space-y-4">
+                        {/* Right Eye (OD) */}
+                        <div>
+                          <span className="text-[9px] font-black text-teal-600 uppercase tracking-wider block mb-2 font-mono">
+                            Right Eye (R.E. / OD)
+                          </span>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">SPH</label>
+                              <input
+                                type="text"
+                                value={reSphDist || '—'}
+                                readOnly
+                                className="w-full bg-slate-100 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 border border-transparent cursor-not-allowed text-center"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">CYL</label>
+                              <input
+                                type="text"
+                                value={reCylDist || '—'}
+                                readOnly
+                                className="w-full bg-slate-100 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 border border-transparent cursor-not-allowed text-center"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">AXIS</label>
+                              <input
+                                type="text"
+                                value={reAxisDist || '—'}
+                                readOnly
+                                className="w-full bg-slate-100 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 border border-transparent cursor-not-allowed text-center"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">ADD</label>
+                              <input
+                                type="text"
+                                value={reAdd || '—'}
+                                readOnly
+                                className="w-full bg-slate-100 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 border border-transparent cursor-not-allowed text-center"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">Vision (D)</label>
+                              <input
+                                type="text"
+                                value={reVisionDist || '—'}
+                                readOnly
+                                className="w-full bg-slate-100 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 border border-transparent cursor-not-allowed text-center"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">Vision (N)</label>
+                              <input
+                                type="text"
+                                value={reVisionNear || '—'}
+                                readOnly
+                                className="w-full bg-slate-100 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 border border-transparent cursor-not-allowed text-center"
+                              />
+                            </div>
+                          </div>
+                        </div>
 
-                  {/* Price */}
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      Order Price (INR)
-                    </label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">
-                        ₹
-                      </span>
+                        {/* Left Eye (OS) */}
+                        <div>
+                          <span className="text-[9px] font-black text-teal-600 uppercase tracking-wider block mb-2 font-mono">
+                            Left Eye (L.E. / OS)
+                          </span>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">SPH</label>
+                              <input
+                                type="text"
+                                value={leSphDist || '—'}
+                                readOnly
+                                className="w-full bg-slate-100 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 border border-transparent cursor-not-allowed text-center"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">CYL</label>
+                              <input
+                                type="text"
+                                value={leCylDist || '—'}
+                                readOnly
+                                className="w-full bg-slate-100 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 border border-transparent cursor-not-allowed text-center"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">AXIS</label>
+                              <input
+                                type="text"
+                                value={leAxisDist || '—'}
+                                readOnly
+                                className="w-full bg-slate-100 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 border border-transparent cursor-not-allowed text-center"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">ADD</label>
+                              <input
+                                type="text"
+                                value={leAdd || '—'}
+                                readOnly
+                                className="w-full bg-slate-100 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 border border-transparent cursor-not-allowed text-center"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">Vision (D)</label>
+                              <input
+                                type="text"
+                                value={leVisionDist || '—'}
+                                readOnly
+                                className="w-full bg-slate-100 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 border border-transparent cursor-not-allowed text-center"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">Vision (N)</label>
+                              <input
+                                type="text"
+                                value={leVisionNear || '—'}
+                                readOnly
+                                className="w-full bg-slate-100 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 border border-transparent cursor-not-allowed text-center"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Pupillary Distance (PD) */}
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pupillary Distance (PD) mm</label>
+                          <input
+                            type="text"
+                            value={pd || '—'}
+                            readOnly
+                            className="w-full bg-slate-100 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-600 border border-transparent cursor-not-allowed text-center"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Select Frame */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Select Spectacle Frame
+                      </label>
                       <input
                         type="text"
-                        placeholder="e.g. 1500"
-                        value={orderPrice}
-                        onChange={(e) => setOrderPrice(e.target.value)}
-                        className="w-full border border-slate-200 bg-white rounded-xl pl-8 pr-4 py-2.5 text-xs font-extrabold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+                        list="frame-suggestions"
+                        value={frameName}
+                        onChange={(e) => setFrameName(e.target.value)}
+                        placeholder="Type custom frame or select..."
+                        className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
                       />
+                      <datalist id="frame-suggestions">
+                        <option value="Onyx Steel Rectangle" />
+                        <option value="Matte Wayfarer Rectangle" />
+                        <option value="Crystal Clear Round" />
+                        <option value="Rose Gold Wire Round" />
+                        <option value="Vintage Tortoise Cat-Eye" />
+                        <option value="Midnight Velvet Cat-Eye" />
+                        <option value="Executive Browline" />
+                        <option value="Havana Amber Oval" />
+                        <option value="Silver Whisper Oval" />
+                        <option value="Onyx Bold Square" />
+                        <option value="Classic Ebony Clubmaster" />
+                        <option value="Hexa-Bronze Geometric" />
+                        <option value="Maverick Gold Aviator" />
+                      </datalist>
                     </div>
-                  </div>
 
-                  {/* Order Status Toggle */}
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
-                      Order Crafting Status
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setOrderStatus('Pending')}
-                        className={`p-3 rounded-xl border text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer transition ${
-                          orderStatus === 'Pending' 
-                            ? 'bg-amber-50 border-amber-500 text-amber-800 shadow-xs' 
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className={`w-2.5 h-2.5 rounded-full ${orderStatus === 'Pending' ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`}></span>
-                        <span>Pending</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setOrderStatus('Ready')}
-                        className={`p-3 rounded-xl border text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer transition ${
-                          orderStatus === 'Ready' 
-                            ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-xs' 
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className={`w-2.5 h-2.5 rounded-full ${orderStatus === 'Ready' ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`}></span>
-                        <span>Ready</span>
-                      </button>
+                    {/* Select Lens */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Select Lens Type
+                      </label>
+                      <input
+                        type="text"
+                        list="lens-suggestions"
+                        value={lensType}
+                        onChange={(e) => setLensType(e.target.value)}
+                        placeholder="Type custom lens or select..."
+                        className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+                      />
+                      <datalist id="lens-suggestions">
+                        <option value="Single Vision" />
+                        <option value="Bifocal" />
+                        <option value="Progressive" />
+                        <option value="Blue Cut" />
+                        <option value="Blue Light Transitions" />
+                        <option value="Anti-glare HMC" />
+                        <option value="Hard Coat (HC)" />
+                      </datalist>
                     </div>
-                  </div>
-                </div>
 
-                {/* Submission & Action Buttons */}
-                <div className="pt-6 border-t border-slate-100 space-y-3">
-                  {/* Save Button with Dynamic Disabling when details match */}
-                  {(() => {
-                    const isSaveDisabled = 
-                      isUpdatingOrder || 
-                      !selectedRx || 
-                      (
-                        frameName.trim() === (selectedRx.frameName || '') &&
-                        lensType.trim() === (selectedRx.lensType || '') &&
-                        orderPrice.trim() === (selectedRx.orderPrice || '') &&
-                        orderStatus === (selectedRx.orderStatus || 'Pending')
-                      );
+                    {/* Actual Cost */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Actual Cost (INR)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">
+                          ₹
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="e.g. 1500"
+                          value={actualCost}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setActualCost(val);
+                            const act = parseFloat(val) || 0;
+                            const rec = parseFloat(receivedCost) || 0;
+                            setBalanceCost(String(act - rec));
+                          }}
+                          className="w-full border border-slate-200 bg-white rounded-xl pl-8 pr-4 py-2.5 text-xs font-extrabold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+                        />
+                      </div>
+                    </div>
 
-                    return (
+                    {/* Received Cost */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Received Amount (INR)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">
+                          ₹
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="e.g. 1000"
+                          value={receivedCost}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setReceivedCost(val);
+                            const act = parseFloat(actualCost) || 0;
+                            const rec = parseFloat(val) || 0;
+                            setBalanceCost(String(act - rec));
+                          }}
+                          className="w-full border border-slate-200 bg-white rounded-xl pl-8 pr-4 py-2.5 text-xs font-extrabold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Balance Cost */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Balance Due (INR)
+                      </label>
+                      <div className="relative font-bold">
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-450 text-xs">
+                          ₹
+                        </span>
+                        <input
+                          type="text"
+                          value={balanceCost}
+                          disabled
+                          className={`w-full border rounded-xl pl-8 pr-4 py-2.5 text-xs font-black cursor-not-allowed transition ${
+                            parseFloat(balanceCost) > 0 
+                              ? 'bg-red-50 border-red-200 text-red-800 shadow-xs' 
+                              : 'bg-emerald-50 border-emerald-250 text-emerald-800 shadow-xs'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Order Status Toggle */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                        Order Crafting Status
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setOrderStatus('Pending')}
+                          className={`p-3 rounded-xl border text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer transition ${
+                            orderStatus === 'Pending' 
+                              ? 'bg-amber-50 border-amber-500 text-amber-800 shadow-xs' 
+                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className={`w-2.5 h-2.5 rounded-full ${orderStatus === 'Pending' ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                          <span>Pending</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setOrderStatus('Ready')}
+                          className={`p-3 rounded-xl border text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer transition ${
+                            orderStatus === 'Ready' 
+                              ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-xs' 
+                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className={`w-2.5 h-2.5 rounded-full ${orderStatus === 'Ready' ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`}></span>
+                          <span>Ready</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Save Button */}
+                    <div className="pt-4 border-t border-slate-100">
                       <button
                         type="button"
                         onClick={handleSaveOrder}
-                        disabled={isSaveDisabled}
-                        className={`w-full py-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition ${
-                          isSaveDisabled 
-                            ? 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed' 
-                            : 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm cursor-pointer'
-                        }`}
+                        disabled={isUpdatingOrder}
+                        className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition"
                       >
                         <Save className="w-4.5 h-4.5" />
-                        <span>
-                          {isUpdatingOrder 
-                            ? "Updating Order..." 
-                            : isSaveDisabled 
-                              ? "Saved & Up to Date" 
-                              : "Confirm & Save Order Details"}
-                        </span>
+                        <span>{isUpdatingOrder ? "Saving to Sheets..." : "Save"}</span>
                       </button>
-                    );
-                  })()}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={handleSendOrderWhatsApp}
-                      disabled={isOrderSent}
-                      className={`py-2.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition cursor-pointer ${
-                        isOrderSent
-                          ? 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
-                          : 'bg-slate-900 hover:bg-slate-850 text-white border border-slate-800'
-                      }`}
-                      title={isOrderSent ? "Order details already sent" : "Send Order details to patient"}
-                    >
-                      <MessageCircle className={`w-4 h-4 ${isOrderSent ? 'text-slate-300' : 'text-emerald-400'}`} />
-                      <span>{isOrderSent ? 'Order Details Sent' : 'Send Order details'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleNotifyCollectionWhatsApp}
-                      disabled={orderStatus !== 'Ready'}
-                      className={`py-2.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition cursor-pointer ${
-                        orderStatus === 'Ready'
-                          ? 'bg-[#25D366] hover:bg-[#20b858] text-white shadow-sm'
-                          : 'bg-gray-100 text-gray-400 cursor-not-allowed border-none'
-                      }`}
-                      title={orderStatus === 'Ready' ? "Notify patient spectacles are ready" : "Set status to Ready to enable notifications"}
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      <span>{selectedRx.isNotified ? "Notified (Resend)" : "Notify ready"}</span>
-                    </button>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {workflowStep === 'whatsapp' && (
+                  <div className="space-y-6 pt-4 border-t border-slate-100 flex flex-col items-center justify-center py-6">
+                    <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-2 animate-bounce">
+                      <ShieldCheck className="w-8 h-8" />
+                    </div>
+                    <div className="text-center">
+                      <h3 className="text-lg font-black text-slate-800">Successfully Saved!</h3>
+                      <p className="text-[11px] text-slate-500 mt-1 px-4">
+                        Order details stored in Google Sheets. You can now send a confirmation.
+                      </p>
+                    </div>
+
+                    <div className="w-full space-y-3 mt-4">
+                      <button
+                        type="button"
+                        onClick={handleSendOrderWhatsApp}
+                        className="w-full py-3 bg-[#25D366] hover:bg-[#20b858] text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition"
+                      >
+                        <MessageCircle className="w-4.5 h-4.5 text-white" />
+                        <span>Send Order via WhatsApp</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedRx(null);
+                          setWorkflowStep('input');
+                        }}
+                        className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition cursor-pointer text-center"
+                      >
+                        Skip & Close Desk
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center text-slate-450 font-bold flex flex-col items-center justify-center h-full min-h-[300px]">
@@ -758,6 +1395,79 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
             )}
           </div>
         </div>
+        {registeredPatientForWhatsApp && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
+            <div className="bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 max-w-md w-full space-y-6 text-center">
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <h3 className="text-base font-black text-slate-900">Patient Registered Successfully!</h3>
+                <p className="text-xs text-slate-400 mt-1">Details synced to Google Sheets</p>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 text-left space-y-2.5 text-xs">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Patient Name</span>
+                  <span className="font-extrabold text-slate-900">{registeredPatientForWhatsApp.name}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Patient ID</span>
+                    <span className="font-bold text-slate-900 font-mono">{registeredPatientForWhatsApp.patientId}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Mobile Number</span>
+                    <span className="font-bold text-slate-900 font-mono">{registeredPatientForWhatsApp.mobile}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cleanPhone = registeredPatientForWhatsApp.mobile.replace(/\D/g, '');
+                    const targetPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+                    const msg = [
+                      `🏥 *Himabindhu Eye Testing & Opticals*`,
+                      `📍 Dharmavaram, Andhra Pradesh | 📞 9949334443`,
+                      ``,
+                      `🌟🌟🌟🌟🌟🌟🌟🌟`,
+                      `🎉 *APPOINTMENT BOOKED*`,
+                      `🌟🌟🌟🌟🌟🌟🌟🌟`,
+                      ``,
+                      `Dear *${registeredPatientForWhatsApp.name}*,`,
+                      `Your appointment is successfully booked!`,
+                      ``,
+                      `🆔 *Patient ID:* ${registeredPatientForWhatsApp.patientId}`,
+                      `📞 *Mobile:* ${registeredPatientForWhatsApp.mobile}`,
+                      `📅 *Date:* ${registeredPatientForWhatsApp.date}`,
+                      ``,
+                      `🌟🌟🌟🌟🌟🌟🌟🌟`,
+                      `_Thank you for choosing Himabindhu Opticals!_`
+                    ].join('\n');
+                    const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
+                    window.open(url, '_blank');
+                    setRegisteredPatientForWhatsApp(null);
+                  }}
+                  className="w-full py-3 bg-[#25D366] hover:bg-[#20b858] text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition"
+                >
+                  <MessageCircle className="w-4.5 h-4.5 text-white" />
+                  <span>Send Welcome WhatsApp Message</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRegisteredPatientForWhatsApp(null)}
+                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Go to Spectacle Queue
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -786,7 +1496,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
       >
         {/* Metric 1 - Today count */}
         <div className={`bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-300 hover:border-amber-500/20 flex flex-col justify-between font-sans ${
-          userProfile?.role === 'admin' ? 'col-span-1' : 'col-span-1 md:col-span-2'
+          userProfile?.role === 'doctor' ? 'col-span-1' : 'col-span-1 md:col-span-2'
         }`}>
           <div className="flex justify-between items-start">
             <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest font-mono">Today's Intake</span>
@@ -803,7 +1513,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
 
         {/* Metric 2 - Monthly total count */}
         <div className={`bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-300 hover:border-amber-500/20 flex flex-col justify-between font-sans ${
-          userProfile?.role === 'admin' ? 'col-span-1' : 'col-span-1 md:col-span-2'
+          userProfile?.role === 'doctor' ? 'col-span-1' : 'col-span-1 md:col-span-2'
         }`}>
           <div className="flex justify-between items-start">
             <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest font-mono">Monthly Total</span>
@@ -818,7 +1528,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
         </div>
 
         {/* Metric 3 - Quick Action Card */}
-        {userProfile?.role === 'admin' && (
+        {userProfile?.role === 'doctor' && (
           <div className="col-span-1 md:col-span-2 bg-slate-900 p-6 rounded-2xl shadow-xl border border-slate-800 flex items-center justify-between text-white relative overflow-hidden">
             <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 text-white/5 font-sans font-black text-8xl pointer-events-none select-none">
               Rx
@@ -966,8 +1676,123 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
         </div>
       </motion.div>
 
+      {/* Patients Queue registered by Receptionist */}
+      {(userProfile?.role === 'admin' || userProfile?.role === 'doctor') && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-8 animate-fade-in" id="receptionist-queue-desk">
+          <div className="p-5 bg-slate-900 border-b border-slate-800 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 bg-amber-600 rounded-lg text-white">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-sm uppercase tracking-wider text-white">Today's Registered Patients (Welcome Desk Queue)</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5 font-medium">
+                  Patients registered today by the receptionist. Click "Write Prescription" to complete refraction diagnostic details.
+                </p>
+              </div>
+            </div>
+          </div>
 
+          <div className="overflow-x-auto min-h-[150px]">
+            {(() => {
+              const todayString = new Date().toISOString().split('T')[0];
+              const todayPatients = patientsList.filter(p => p.date === todayString);
 
+              if (todayPatients.length === 0) {
+                return (
+                  <div className="p-12 text-center text-slate-450 font-bold">
+                    <p className="text-xs uppercase tracking-wider">No patient registrations recorded today</p>
+                    <p className="text-[11px] text-slate-400 mt-1 italic font-normal">Patients registered at the welcome desk will appear here in real-time.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-slate-50/70 border-b border-slate-150 text-[10px] text-slate-455 font-bold uppercase tracking-widest">
+                      <th className="py-3.5 px-6">Patient ID</th>
+                      <th className="py-3.5 px-6">Patient Name</th>
+                      <th className="py-3.5 px-6">Contact / Mobile</th>
+                      <th className="py-3.5 px-6">Age / Gender</th>
+                      <th className="py-3.5 px-6">Status</th>
+                      <th className="py-3.5 px-6 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-150 text-slate-700 font-semibold font-sans">
+                    {todayPatients.map((patient) => {
+                      const hasRx = allPrescriptions.some(rx => rx.patientId === patient.patientId);
+                      return (
+                        <tr key={patient.patientId} className="hover:bg-slate-50/50 transition">
+                          <td className="py-4 px-6">
+                            <span className="font-mono font-bold text-xs text-amber-600 bg-amber-50/60 border border-amber-200 px-2.5 py-1 rounded">
+                              {patient.patientId}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-slate-900 font-bold">{patient.name}</td>
+                          <td className="py-4 px-6 font-mono text-slate-550">{patient.mobile}</td>
+                          <td className="py-4 px-6 text-slate-550">{patient.age} Yrs / {patient.gender}</td>
+                          <td className="py-4 px-6">
+                            {hasRx ? (
+                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[9.5px] font-black uppercase tracking-wider">
+                                🟢 Prescribed
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[9.5px] font-black uppercase tracking-wider animate-pulse">
+                                🟡 Waiting
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-4 px-6 text-right flex items-center justify-end gap-2.5">
+                            {hasRx ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-400 text-xs font-medium italic mr-1">Completed</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeletePatientFromQueue(patient.patientId)}
+                                  className="p-1.5 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition cursor-pointer flex items-center justify-center"
+                                  title="Remove patient from welcome desk queue"
+                                >
+                                  <Trash2 className="w-4.5 h-4.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                {userProfile?.role === 'doctor' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (setPrefilledPatient) {
+                                        setPrefilledPatient(patient);
+                                        setActiveTab('prescription');
+                                      }
+                                    }}
+                                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[10.5px] font-black uppercase tracking-wider transition cursor-pointer shadow-sm hover:scale-[1.02]"
+                                  >
+                                    Write Prescription
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeletePatientFromQueue(patient.patientId)}
+                                  className="p-1.5 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition cursor-pointer flex items-center justify-center"
+                                  title="Remove patient from welcome desk queue"
+                                >
+                                  <Trash2 className="w-4.5 h-4.5" />
+                                </button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth, UserRole } from '../context/AuthContext';
-import { doc, setDoc, getDocs, collection, deleteDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../config/firebase';
+import { doc, setDoc, getDocs, collection, deleteDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType, firebaseConfig } from '../config/firebase';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { 
   Settings, 
   UserCheck, 
@@ -22,8 +24,11 @@ import {
   Trash,
   MapPin,
   Smartphone,
-  Activity
+  Activity,
+  Download
 } from 'lucide-react';
+
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby6GwqVZVNk4vR9wsMN8PMqZW-hsJuscR5JscUfNMf7pTdC7ykcrrONURgIM2p0qcHO/exec";
 
 interface StaffUser {
   uid?: string;
@@ -32,16 +37,19 @@ interface StaffUser {
   role: UserRole;
   password?: string;
   createdAt: any;
+  docId?: string;
+  docIds?: string[];
 }
 
 interface Patient {
   patientId: string;
   name: string;
   mobile: string;
-  age: number;
+  age: number | string;
   gender: string;
   date: string;
   createdAt?: any;
+  [key: string]: any;
 }
 
 export default function AdminSettings() {
@@ -71,28 +79,43 @@ export default function AdminSettings() {
   const [customNotice, setCustomNotice] = useState('');
   const [scheduleSuccessMsg, setScheduleSuccessMsg] = useState<string | null>(null);
 
-  // Fetch all user session audit logs
-  const loadLoginLogs = async () => {
-    setLoadingLogs(true);
+  // Fetch all user session audit logs in Real-Time
+  useEffect(() => {
+    let unsubscribe: () => void;
+
     if (isDemoMode) {
       const stored = localStorage.getItem('hb_demo_login_logs') || '[]';
       setLoginLogs(JSON.parse(stored));
       setLoadingLogs(false);
-      return;
-    }
-    try {
-      const q = query(collection(db, 'login_logs'), orderBy('loginTime', 'desc'), limit(50));
-      const querySnap = await getDocs(q);
-      if (querySnap) {
-        const list = querySnap.docs.map(doc => doc.data());
-        setLoginLogs(list);
+      
+      // To simulate realtime across tabs in demo mode, listen to storage events
+      const handleStorage = (e: StorageEvent) => {
+        if (e.key === 'hb_demo_login_logs' && e.newValue) {
+          setLoginLogs(JSON.parse(e.newValue));
+        }
+      };
+      window.addEventListener('storage', handleStorage);
+      return () => window.removeEventListener('storage', handleStorage);
+    } else {
+      try {
+        const q = query(collection(db, 'login_logs'), orderBy('loginTime', 'desc'), limit(50));
+        unsubscribe = onSnapshot(q, (querySnap) => {
+          const list = querySnap.docs.map(doc => doc.data());
+          setLoginLogs(list);
+          setLoadingLogs(false);
+        }, (err) => {
+          console.error("Failed loading session logs real-time:", err);
+          setLoadingLogs(false);
+        });
+      } catch (err) {
+        console.error("Error setting up real-time session logs:", err);
+        setLoadingLogs(false);
       }
-    } catch (err) {
-      console.error("Failed loading session logs:", err);
-    } finally {
-      setLoadingLogs(false);
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
     }
-  };
+  }, [isDemoMode]);
 
   // Fetch all provisioned staff accounts
   const loadStaffRegistry = async () => {
@@ -122,8 +145,35 @@ export default function AdminSettings() {
         handleFirestoreError(err, OperationType.LIST, 'users')
       );
       if (querySnap) {
-        const list = querySnap.docs.map(doc => doc.data() as StaffUser);
-        setStaffList(list);
+        const list = querySnap.docs.map(doc => ({
+          ...(doc.data() as StaffUser),
+          docId: doc.id
+        }));
+
+        // Deduplicate and group by email
+        const uniqueMap = new Map<string, StaffUser & { docIds: string[] }>();
+        list.forEach(u => {
+          const emailKey = u.email.toLowerCase();
+          const existing = uniqueMap.get(emailKey);
+          if (!existing) {
+            uniqueMap.set(emailKey, {
+              ...u,
+              docIds: [u.docId]
+            });
+          } else {
+            // Keep the non-temp one as the primary representation if it exists
+            const isExistingTemp = existing.docId?.startsWith('temp_');
+            const isCurrentTemp = u.docId.startsWith('temp_');
+            const preferCurrent = isExistingTemp && !isCurrentTemp;
+            
+            uniqueMap.set(emailKey, {
+              ...(preferCurrent ? u : existing),
+              docIds: [...existing.docIds, u.docId]
+            });
+          }
+        });
+
+        setStaffList(Array.from(uniqueMap.values()));
       }
     } catch (e) {
       console.error("Failed loading staff registry database", e);
@@ -136,19 +186,20 @@ export default function AdminSettings() {
   const loadReceptionList = async () => {
     setLoadingPatients(true);
     try {
-      if (isDemoMode) {
-        const stored = localStorage.getItem('hb_demo_patients') || '[]';
-        setPatientsList(JSON.parse(stored));
-      } else {
-        const querySnap = await getDocs(collection(db, 'patients')).catch(err => 
-          handleFirestoreError(err, OperationType.LIST, 'patients')
-        );
-        if (querySnap) {
-          const list = querySnap.docs.map(doc => doc.data() as Patient);
-          // Sort descending
-          setPatientsList(list.sort((a,b) => b.patientId.localeCompare(a.patientId)));
-        }
-      }
+      const response = await fetch(`${APPS_SCRIPT_URL}?action=getPatients`);
+      const rawData = await response.json();
+      
+      const mapped = rawData.map((item: any) => ({
+        patientId: item['Patient ID'] || '',
+        name: item['Patient Name'] || '',
+        mobile: item['Mobile'] || '',
+        age: item['Age'] || '',
+        gender: item['Gender'] || '',
+        date: item['Date'] || '',
+        ...item
+      }));
+      
+      setPatientsList(mapped.sort((a: any, b: any) => String(b.patientId).localeCompare(String(a.patientId))));
     } catch (err) {
       console.error("Failed loading receptionist patient logs:", err);
     } finally {
@@ -156,10 +207,44 @@ export default function AdminSettings() {
     }
   };
 
+  const handleDownloadExcel = () => {
+    if (patientsList.length === 0) {
+      alert("No patient data available to download.");
+      return;
+    }
+    
+    const exportHeaders = [
+      "Date", "Patient ID", "Prescription ID", "Patient Name", "Mobile", "Age", "Gender",
+      "RE SPH", "RE CYL", "RE AXIS", "RE Vision", "RE Near Vision", "RE Add",
+      "LE SPH", "LE CYL", "LE AXIS", "LE Vision", "LE Near Vision", "LE Add",
+      "PD", "Advice", "Notes", "Frame Name", "Lens Type", "Actual Cost", 
+      "Received Amount", "Balance Amount", "Payment Status", "Delivery Status"
+    ];
+
+    let csvContent = exportHeaders.join(",") + "\n";
+
+    patientsList.forEach((patient: any) => {
+      const row = exportHeaders.map(header => {
+        let cellData = patient[header] !== undefined && patient[header] !== null ? String(patient[header]) : "";
+        cellData = cellData.replace(/"/g, '""');
+        return `"${cellData}"`;
+      });
+      csvContent += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Patients_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   useEffect(() => {
     loadStaffRegistry();
     loadReceptionList();
-    loadLoginLogs();
 
     // Load clinic schedule & status
     const savedSchedule = localStorage.getItem('hb_clinic_schedule');
@@ -235,25 +320,36 @@ export default function AdminSettings() {
     }
 
     try {
-      const tempId = `temp_${checkEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      const userDocRef = doc(db, 'users', tempId);
+      // 1. Initialize secondary Firebase App to create user in Auth without signing out current admin
+      const secondaryApp = initializeApp(firebaseConfig, `temp_provision_${Date.now()}`);
+      const secondaryAuth = getAuth(secondaryApp);
+      
+      // 2. Create the user in Firebase Auth
+      const authCredential = await createUserWithEmailAndPassword(secondaryAuth, checkEmail, password.trim());
+      const newUid = authCredential.user.uid;
+      
+      // 3. Clean up secondary app to prevent resource/credentials leaks
+      await deleteApp(secondaryApp);
+
+      // 4. Create profile document directly with the real Auth UID as the document key
+      const userDocRef = doc(db, 'users', newUid);
       
       await setDoc(userDocRef, {
         ...newStaff,
-        uid: tempId,
+        uid: newUid,
         createdAt: serverTimestamp()
       }).catch(err => {
-        handleFirestoreError(err, OperationType.CREATE, `users/${tempId}`);
+        handleFirestoreError(err, OperationType.CREATE, `users/${newUid}`);
       });
 
-      setSuccessMsg(`Clinical authorization pre-provisioned for ${newStaff.name} (${newStaff.role}).`);
+      setSuccessMsg(`Clinical authorization and Firebase Auth account provisioned successfully for ${newStaff.name} (${newStaff.role}).`);
       setName('');
       setEmail('');
       setPassword('');
       await loadStaffRegistry();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Account pre-provisioning failed. Review security rules.");
+      alert(`Account provisioning failed: ${err.message || String(err)}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -277,10 +373,17 @@ export default function AdminSettings() {
     }
 
     try {
-      const targetId = staff.uid || `temp_${staff.email.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')}`;
-      await deleteDoc(doc(db, 'users', targetId)).catch(err => {
-        handleFirestoreError(err, OperationType.DELETE, `users/${targetId}`);
-      });
+      const idsToDelete = staff.docIds || (staff.uid ? [staff.uid] : []);
+      if (idsToDelete.length === 0) {
+        const targetId = `temp_${staff.email.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')}`;
+        idsToDelete.push(targetId);
+      }
+
+      for (const docId of idsToDelete) {
+        await deleteDoc(doc(db, 'users', docId)).catch(err => {
+          handleFirestoreError(err, OperationType.DELETE, `users/${docId}`);
+        });
+      }
       
       alert(`Access revoked for ${staff.name}.`);
       await loadStaffRegistry();
@@ -295,21 +398,20 @@ export default function AdminSettings() {
     const confirmDelete = window.confirm(`Administrative Override: Are you sure you wish to delete the patient file for ${patient.name} (${patient.patientId})? This action cannot be undone.`);
     if (!confirmDelete) return;
 
-    if (isDemoMode) {
+    try {
       const stored = localStorage.getItem('hb_demo_patients') || '[]';
       const parsed = JSON.parse(stored) as Patient[];
       const updated = parsed.filter(p => p.patientId !== patient.patientId);
       localStorage.setItem('hb_demo_patients', JSON.stringify(updated));
-      await loadReceptionList();
-      return;
-    }
 
-    try {
-      await deleteDoc(doc(db, 'patients', patient.patientId)).catch(err => {
-        handleFirestoreError(err, OperationType.DELETE, `patients/${patient.patientId}`);
-      });
+      // Also clean up patient prescriptions from local storage
+      const storedRx = localStorage.getItem('hb_demo_prescriptions') || '[]';
+      const parsedRx = JSON.parse(storedRx) as any[];
+      const updatedRx = parsedRx.filter(rx => rx.patientId !== patient.patientId);
+      localStorage.setItem('hb_demo_prescriptions', JSON.stringify(updatedRx));
+
       await loadReceptionList();
-      alert(`Patient entry ${patient.patientId} has been administrative deleted.`);
+      alert(`Patient entry ${patient.patientId} has been administratively deleted.`);
     } catch (err) {
       console.error("Override deletion failed", err);
       alert("Failed to override patient entry.");
@@ -465,37 +567,52 @@ export default function AdminSettings() {
             </p>
           ) : (
             <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
-              {staffList.map((staff) => (
-                <div 
-                  key={staff.email} 
-                  className="p-3 bg-slate-50 border border-slate-150 rounded-xl relative group flex justify-between items-center transition hover:bg-slate-100/50"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      {staff.role === 'admin' ? (
-                        <Shield className="w-3.5 h-3.5 text-amber-600" />
-                      ) : (
-                        <User className="w-3.5 h-3.5 text-slate-600" />
-                      )}
-                      <h5 className="font-bold text-slate-800 text-xs truncate">{staff.name}</h5>
+              {staffList.map((staff) => {
+                const isClaimed = staff.docIds ? staff.docIds.some((id: string) => !id.startsWith('temp_')) : (staff.uid && !staff.uid.startsWith('temp_'));
+                return (
+                  <div 
+                    key={staff.email} 
+                    className="p-3 bg-slate-50 border border-slate-150 rounded-xl relative group flex justify-between items-center transition hover:bg-slate-100/50"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        {staff.role === 'admin' ? (
+                          <Shield className="w-3.5 h-3.5 text-amber-600" />
+                        ) : (
+                          <User className="w-3.5 h-3.5 text-slate-600" />
+                        )}
+                        <h5 className="font-bold text-slate-800 text-xs truncate">{staff.name}</h5>
+                      </div>
+                      <p className="text-[9px] text-slate-450 mt-1 font-mono break-all font-semibold select-all">{staff.email}</p>
+                      
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="inline-block text-[8px] uppercase font-black tracking-widest text-amber-600 bg-amber-50/25 border border-amber-200 px-1.5 py-0.5 rounded">
+                          {staff.role}
+                        </span>
+                        {isDemoMode ? null : isClaimed ? (
+                          <span className="inline-block text-[8px] uppercase font-black tracking-widest text-emerald-600 bg-emerald-50/25 border border-emerald-200 px-1.5 py-0.5 rounded">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="inline-block text-[8px] uppercase font-black tracking-widest text-orange-600 bg-orange-50/25 border border-orange-200 px-1.5 py-0.5 rounded animate-pulse">
+                            Pending Setup
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-[9px] text-slate-450 mt-1 font-mono break-all font-semibold select-all">{staff.email}</p>
-                    <span className="inline-block mt-2 text-[8px] uppercase font-black tracking-widest text-amber-600 bg-amber-50/25 border border-amber-200 px-1.5 py-0.5 rounded">
-                      {staff.role}
-                    </span>
-                  </div>
 
-                  <div className="flex flex-col items-end shrink-0 pl-2">
-                    <button
-                      onClick={() => handleRevokeStaff(staff)}
-                      className="p-1.5 text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition opacity-60 hover:opacity-100 cursor-pointer"
-                      title="De-authorize clinician immediately"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex flex-col items-end shrink-0 pl-2">
+                      <button
+                        onClick={() => handleRevokeStaff(staff)}
+                        className="p-1.5 text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition opacity-60 hover:opacity-100 cursor-pointer"
+                        title="De-authorize clinician immediately"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -660,17 +777,45 @@ export default function AdminSettings() {
           </div>
           
           {/* Active Search Filter inside Admin reception list */}
-          <div className="relative shrink-0 max-w-xs w-full">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-              <Search className="w-4 h-4" />
-            </span>
-            <input
-              type="text"
-              placeholder="Search Reception List"
-              value={patientSearch}
-              onChange={(e) => setPatientSearch(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 focus:bg-white text-slate-300 focus:text-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs font-bold focus:outline-hidden transition"
-            />
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+            <div className="relative shrink-0 w-full sm:max-w-xs">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                <Search className="w-4 h-4" />
+              </span>
+              <input
+                type="text"
+                placeholder="Search Reception List"
+                value={patientSearch}
+                onChange={(e) => setPatientSearch(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 focus:bg-white text-slate-300 focus:text-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold focus:outline-hidden transition"
+              />
+            </div>
+            
+            <button
+              onClick={() => {
+                const handleClearDatabase = () => {
+                  if (window.confirm("Are you sure you want to delete all local patient data? Note: You must also delete rows from your Google Sheet!")) {
+                    localStorage.removeItem('hb_demo_patients');
+                    localStorage.removeItem('hb_demo_prescriptions');
+                    setPatientsList([]);
+                    alert("Local database wiped successfully! Please clear Google Sheets manually.");
+                    window.location.reload();
+                  }
+                };
+                handleClearDatabase();
+              }}
+              className="px-6 py-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium border border-red-200 text-xs font-black uppercase tracking-wider"
+            >
+              Clear Local Data
+            </button>
+            <button
+              onClick={handleDownloadExcel}
+              className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2.5 bg-[#25D366] hover:bg-[#20b858] text-white rounded-xl text-xs font-black uppercase tracking-wider transition shadow-md cursor-pointer shrink-0"
+              title="Download full patient registry to Excel"
+            >
+              <Download className="w-4.5 h-4.5" />
+              <span>Download Excel</span>
+            </button>
           </div>
         </div>
 
@@ -740,11 +885,11 @@ export default function AdminSettings() {
             </div>
           </div>
           <button 
-            onClick={loadLoginLogs}
-            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-teal-400 font-bold border border-slate-700/60 rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-teal-400 font-bold border border-slate-700/60 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm opacity-80 cursor-default"
+            title="Real-time sync enabled"
           >
             <Clock className="w-3.5 h-3.5 text-teal-400" />
-            <span>Refresh Logs</span>
+            <span>Live Sync On</span>
           </button>
         </div>
 
@@ -753,7 +898,7 @@ export default function AdminSettings() {
             <Loader2 className="w-8 h-8 animate-spin text-teal-600 mb-3" />
             <p className="text-xs uppercase tracking-wider">Loading login audit trail...</p>
           </div>
-        ) : receptionistLogs.length === 0 ? (
+        ) : loginLogs.length === 0 ? (
           <div className="p-16 text-center text-slate-450 font-bold">
             <p className="text-xs uppercase tracking-wider">No receptionist login sessions recorded</p>
             <p className="text-[11px] text-slate-400 mt-1 italic font-normal">Session logs will begin populating automatically as receptionists authenticate.</p>
@@ -771,10 +916,9 @@ export default function AdminSettings() {
                   <th className="py-3.5 px-6">Device Console</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-150 text-slate-700 font-semibold font-sans">
-                {receptionistLogs
-                  .map((log, index) => (
-                    <tr key={log.loginTime + '_' + index} className="hover:bg-slate-50/50 transition">
+              <tbody className="divide-y divide-slate-100">
+                {loginLogs.map((log: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-slate-50/50 transition">
                       <td className="py-4 px-6 text-slate-500 font-mono text-[11px]">
                         {new Date(log.loginTime).toLocaleString('en-IN', {
                           year: 'numeric',

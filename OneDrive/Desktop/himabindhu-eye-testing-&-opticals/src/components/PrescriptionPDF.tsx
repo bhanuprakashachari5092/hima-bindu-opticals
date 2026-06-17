@@ -8,7 +8,7 @@ import {
   PDFViewer, 
   PDFDownloadLink 
 } from '@react-pdf/renderer';
-import { Download, FileText, Printer, CheckSquare, RefreshCw } from 'lucide-react';
+import { Download, FileText, Printer, CheckSquare, RefreshCw, MessageCircle } from 'lucide-react';
 
 // Design styles mimicking a physical, professional optical clinic diagnostic prescription letterhead
 const styles = StyleSheet.create({
@@ -220,6 +220,9 @@ export interface Prescription {
   orderPrice?: string;
   isNotified?: boolean;
   isOrderSent?: boolean;
+  actualCost?: string;
+  receivedCost?: string;
+  balanceCost?: string;
 }
 
 interface PrescriptionPDFProps {
@@ -315,9 +318,9 @@ export const PrescriptionPDFDocument = ({ prescription }: PrescriptionPDFProps) 
           <View style={styles.tableRow}>
             <View style={[styles.tableCell, styles.colEye]}><Text></Text></View>
             <View style={[styles.tableCell, styles.colType]}><Text>Near</Text></View>
-            <View style={[styles.tableCell, styles.colSph]}><Text>{rightEyeData.near.sph || '—'}</Text></View>
-            <View style={[styles.tableCell, styles.colCyl]}><Text>{rightEyeData.near.cyl || '—'}</Text></View>
-            <View style={[styles.tableCell, styles.colAxis]}><Text>{rightEyeData.near.axis || '—'}</Text></View>
+            <View style={[styles.tableCell, styles.colSph]}><Text>{rightEyeData.near.sph || ''}</Text></View>
+            <View style={[styles.tableCell, styles.colCyl]}><Text>{rightEyeData.near.cyl || ''}</Text></View>
+            <View style={[styles.tableCell, styles.colAxis]}><Text>{rightEyeData.near.axis || ''}</Text></View>
             <View style={[styles.tableCell, styles.colVision]}><Text>{rightEyeData.near.vision || '—'}</Text></View>
           </View>
 
@@ -345,9 +348,9 @@ export const PrescriptionPDFDocument = ({ prescription }: PrescriptionPDFProps) 
           <View style={styles.tableRow}>
             <View style={[styles.tableCell, styles.colEye]}><Text></Text></View>
             <View style={[styles.tableCell, styles.colType]}><Text>Near</Text></View>
-            <View style={[styles.tableCell, styles.colSph]}><Text>{leftEyeData.near.sph || '—'}</Text></View>
-            <View style={[styles.tableCell, styles.colCyl]}><Text>{leftEyeData.near.cyl || '—'}</Text></View>
-            <View style={[styles.tableCell, styles.colAxis]}><Text>{leftEyeData.near.axis || '—'}</Text></View>
+            <View style={[styles.tableCell, styles.colSph]}><Text>{leftEyeData.near.sph || ''}</Text></View>
+            <View style={[styles.tableCell, styles.colCyl]}><Text>{leftEyeData.near.cyl || ''}</Text></View>
+            <View style={[styles.tableCell, styles.colAxis]}><Text>{leftEyeData.near.axis || ''}</Text></View>
             <View style={[styles.tableCell, styles.colVision]}><Text>{leftEyeData.near.vision || '—'}</Text></View>
           </View>
 
@@ -1034,13 +1037,13 @@ export function printPrescriptionHTML(rx: Prescription) {
               </tr>
               <tr>
                 <td style="background-color:#f1f5f9; font-weight:800;">NEAR VISION</td>
-                <td>${rx.rightEyeData.near.sph || '—'}</td>
-                <td>${rx.rightEyeData.near.cyl || '—'}</td>
-                <td>${rx.rightEyeData.near.axis || '—'}</td>
+                <td>${rx.rightEyeData.near.sph || ''}</td>
+                <td>${rx.rightEyeData.near.cyl || ''}</td>
+                <td>${rx.rightEyeData.near.axis || ''}</td>
                 <td style="color:#1e3b8b; font-weight:800;">${rx.rightEyeData.near.vision || '—'}</td>
-                <td>${rx.leftEyeData.near.sph || '—'}</td>
-                <td>${rx.leftEyeData.near.cyl || '—'}</td>
-                <td>${rx.leftEyeData.near.axis || '—'}</td>
+                <td>${rx.leftEyeData.near.sph || ''}</td>
+                <td>${rx.leftEyeData.near.cyl || ''}</td>
+                <td>${rx.leftEyeData.near.axis || ''}</td>
                 <td style="color:#1e3b8b; font-weight:800;">${rx.leftEyeData.near.vision || '—'}</td>
               </tr>
               <tr class="bg-add-row">
@@ -1255,6 +1258,42 @@ export function PrescriptionPDFViewerPanel({ prescription }: PrescriptionPDFProp
     ) || false;
   };
 
+  const handleSendWhatsApp = () => {
+    const rx = prescription;
+    const cleanPhone = rx.mobile.replace(/\D/g, '');
+    const targetPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+    
+    const fmt = (v: string | undefined) => (v && v !== '—' && v !== '') ? v : '—';
+    const msg = [
+      `🏥 *Himabindhu Eye Testing & Opticals*`,
+      `📍 Dharmavaram, Andhra Pradesh | 📞 9949334443`,
+      ``,
+      `✨✨✨✨✨✨✨✨`,
+      `👓 *CLINICAL EYE PRESCRIPTION*`,
+      `✨✨✨✨✨✨✨✨`,
+      ``,
+      `👤 *Patient:* ${rx.patientName}`,
+      `🆔 *Patient ID:* ${rx.patientId}`,
+      `🔖 *Rx ID:* ${rx.prescriptionId}`,
+      `🎂 *Age/Sex:* ${rx.age} yrs / ${rx.gender}`,
+      ``,
+      `👁️ *RIGHT EYE (OD):*`,
+      `*Distance:* SPH: ${fmt(rx.rightEyeData?.distance?.sph)} | CYL: ${fmt(rx.rightEyeData?.distance?.cyl)} | AXIS: ${fmt(rx.rightEyeData?.distance?.axis)}° | Vision: ${fmt(rx.rightEyeData?.distance?.vision)}`,
+      `*Near:* Vision: ${fmt(rx.rightEyeData?.near?.vision)} | *ADD:* +${fmt(rx.rightEyeData?.add)}`,
+      ``,
+      `👁️ *LEFT EYE (OS):*`,
+      `*Distance:* SPH: ${fmt(rx.leftEyeData?.distance?.sph)} | CYL: ${fmt(rx.leftEyeData?.distance?.cyl)} | AXIS: ${fmt(rx.leftEyeData?.distance?.axis)}° | Vision: ${fmt(rx.leftEyeData?.distance?.vision)}`,
+      `*Near:* Vision: ${fmt(rx.leftEyeData?.near?.vision)} | *ADD:* +${fmt(rx.leftEyeData?.add)}`,
+      rx.pd ? `📏 *PD:* ${rx.pd} mm` : null,
+      ``,
+      `✨✨✨✨✨✨✨✨`,
+      `_This is your digital eye prescription. Thank you! 🙏_`
+    ].filter(v => v !== null).join('\n');
+    
+    const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden" id="prescription_pdf_panel">
       <div className="p-4 bg-slate-900 border-b border-slate-800 flex flex-wrap gap-4 items-center justify-between">
@@ -1293,6 +1332,14 @@ export function PrescriptionPDFViewerPanel({ prescription }: PrescriptionPDFProp
               </>
             )}
           </PDFDownloadLink>
+
+          <button
+            onClick={handleSendWhatsApp}
+            className="px-3.5 py-1.5 text-xs bg-[#25D366] text-white hover:bg-[#20b858] font-extrabold rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-sm shadow-[#25D366]/20"
+          >
+            <MessageCircle className="w-3.5 h-3.5 text-white" />
+            Send WhatsApp
+          </button>
         </div>
       </div>
 
@@ -1588,6 +1635,62 @@ export function PrescriptionPDFViewerPanel({ prescription }: PrescriptionPDFProp
               </span>
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 font-sans italic min-h-[45px] leading-relaxed shadow-3xs">
                 {prescription.notes || "Regular refractive diagnostics check up. Frame advice registered."}
+              </div>
+            </div>
+
+            {/* A FEW FRIENDLY REMINDERS SECTION */}
+            <div className="flex flex-col gap-2 mb-4">
+              <div className="bg-[#f0f7f0] rounded-xl border border-[#d6ebd6] p-3.5 flex justify-between items-center shadow-3xs relative overflow-hidden">
+                <div className="z-10">
+                  <h4 className="text-[10px] font-black text-[#2e6b2e] tracking-widest uppercase mb-2.5 flex items-center gap-1.5">
+                    A Few Friendly Reminders
+                  </h4>
+                  <div className="flex flex-col gap-1.5 text-[9.5px] text-[#426b42] font-semibold">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 rounded-full bg-[#3e8c3e] text-white flex items-center justify-center shrink-0 shadow-sm">
+                        <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      </div>
+                      <span>Use your prescribed glasses for clear and comfortable vision.</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 rounded-full bg-[#3e8c3e] text-white flex items-center justify-center shrink-0 shadow-sm">
+                        <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      </div>
+                      <span>Follow up regularly for a healthier tomorrow.</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 rounded-full bg-[#3e8c3e] text-white flex items-center justify-center shrink-0 shadow-sm">
+                        <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      </div>
+                      <span>We're always here to help you see better, every day.</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-center justify-center z-10 px-4 mr-2">
+                  <div className="text-xl font-serif italic font-extrabold text-[#3e8c3e] opacity-90 transform -rotate-2">
+                    Take care
+                  </div>
+                  <div className="text-lg font-serif italic text-[#3e8c3e] flex items-center gap-1 transform rotate-1">
+                    of your eyes!
+                    <svg className="w-4 h-4 fill-current rotate-45" viewBox="0 0 24 24"><path d="M17.026 1.834a8.665 8.665 0 0 0-4.662 1.303 8.665 8.665 0 0 0-4.661-1.303C3.606 1.834.331 5.342.331 9.693c0 6.64 12.033 13.974 12.033 13.974s12.032-7.334 12.032-13.974c0-4.351-3.274-7.859-7.37-7.859zM12.364 21.054V6.91h-.727v14.144a17.432 17.432 0 0 1-5.748-4.733c-3.14-3.774-3.692-7.143-3.692-7.143V6.91h3.692v1.455H2.197a6.223 6.223 0 0 1 5.467-5.084 6.223 6.223 0 0 1 4.699 2.08l.001.001.001-.001a6.223 6.223 0 0 1 4.699-2.08 6.223 6.223 0 0 1 5.466 5.084H18.81V6.91h-3.692v2.268s-.552 3.369-3.692 7.143a17.432 17.432 0 0 1-5.748 4.733z"/></svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-[#f0f7f0] rounded-xl border border-[#d6ebd6] p-3 flex justify-between items-center shadow-3xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#3e8c3e] flex items-center justify-center text-white shrink-0 shadow-sm">
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5L12 3z"/></svg>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-black text-[#2e6b2e]">Thank you for choosing us!</span>
+                    <span className="text-[10px] text-[#426b42] font-semibold">Your vision is our priority.</span>
+                  </div>
+                </div>
+                <div className="mr-6 opacity-80">
+                  <svg className="w-10 h-10 stroke-[#3e8c3e] stroke-2" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="12" r="3"/><path d="M9 12h6M6 9h12"/></svg>
+                </div>
               </div>
             </div>
 

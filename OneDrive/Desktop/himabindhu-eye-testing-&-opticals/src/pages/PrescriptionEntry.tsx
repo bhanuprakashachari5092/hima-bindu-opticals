@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { doc, setDoc, serverTimestamp, collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../config/firebase';
 import { Prescription, EyePower, printPrescriptionHTML, PrescriptionPDFDocument } from '../components/PrescriptionPDF';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { generateNextPrescriptionId, generateNextPatientId } from '../utils/idGenerators';
@@ -262,25 +260,11 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
   // Prefetch patient records for searchable directory lookup
   useEffect(() => {
     async function loadPatients() {
-      if (isDemoMode) {
-        const stored = localStorage.getItem('hb_demo_patients') || '[]';
-        setPatientsList(JSON.parse(stored));
-      } else {
-        try {
-          const snap = await getDocs(collection(db, 'patients')).catch(err => 
-            handleFirestoreError(err, OperationType.LIST, 'patients')
-          );
-          if (snap) {
-            const list = snap.docs.map(doc => doc.data() as Patient);
-            setPatientsList(list);
-          }
-        } catch (e) {
-          console.error("Failed loading patient lookup directory", e);
-        }
-      }
+      const stored = localStorage.getItem('hb_demo_patients') || '[]';
+      setPatientsList(JSON.parse(stored));
     }
     loadPatients();
-  }, [isDemoMode]);
+  }, []);
 
   // Handle incoming trigger redirects from registration desk
   useEffect(() => {
@@ -294,7 +278,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
   const fetchRxSequenceId = async () => {
     setIsLoadingRxId(true);
     try {
-      const nextId = await generateNextPrescriptionId(isDemoMode);
+      const nextId = await generateNextPrescriptionId(true);
       setPrescriptionId(nextId);
     } catch (e) {
       console.error(e);
@@ -305,7 +289,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
 
   useEffect(() => {
     fetchRxSequenceId();
-  }, [isDemoMode]);
+  }, []);
 
   const prefillPrescriptionPowers = (rx: Prescription) => {
     setReSphDist(rx.rightEyeData.distance.sph || '');
@@ -337,24 +321,12 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
 
   const loadLatestPrescription = async (patId: string) => {
     try {
-      if (isDemoMode) {
-        const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
-        const rxList = JSON.parse(stored) as Prescription[];
-        const patientRx = rxList.filter(r => r.patientId === patId);
-        if (patientRx.length > 0) {
-          patientRx.sort((a, b) => b.prescriptionId.localeCompare(a.prescriptionId));
-          prefillPrescriptionPowers(patientRx[0]);
-        }
-        return;
-      }
-
-      // Live Firestore fetch
-      const prescriptionsRef = collection(db, 'prescriptions');
-      const q = query(prescriptionsRef, where('patientId', '==', patId), orderBy('prescriptionId', 'desc'), limit(1));
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        const latest = snap.docs[0].data() as Prescription;
-        prefillPrescriptionPowers(latest);
+      const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
+      const rxList = JSON.parse(stored) as Prescription[];
+      const patientRx = rxList.filter(r => r.patientId === patId);
+      if (patientRx.length > 0) {
+        patientRx.sort((a, b) => b.prescriptionId.localeCompare(a.prescriptionId));
+        prefillPrescriptionPowers(patientRx[0]);
       }
     } catch (err) {
       console.error("Failed loading latest patient prescription:", err);
@@ -431,7 +403,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
 
     try {
       if (!finalPatientId) {
-        finalPatientId = await generateNextPatientId(isDemoMode);
+        finalPatientId = await generateNextPatientId(true);
         setPatientId(finalPatientId);
 
         const newPatient = {
@@ -443,31 +415,21 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
           date
         };
 
-        if (isDemoMode) {
-          const stored = localStorage.getItem('hb_demo_patients') || '[]';
-          const current = JSON.parse(stored);
-          current.push(newPatient);
-          localStorage.setItem('hb_demo_patients', JSON.stringify(current));
-        } else {
-          const patientDocRef = doc(db, 'patients', finalPatientId);
-          await setDoc(patientDocRef, {
-            ...newPatient,
-            createdAt: serverTimestamp()
-          }).catch(err => {
-            handleFirestoreError(err, OperationType.CREATE, `patients/${finalPatientId}`);
-          });
-        }
+        const stored = localStorage.getItem('hb_demo_patients') || '[]';
+        const current = JSON.parse(stored);
+        current.push(newPatient);
+        localStorage.setItem('hb_demo_patients', JSON.stringify(current));
       }
 
       const rightEyeData: EyePower = {
         distance: { sph: reSphDist, cyl: reCylDist, axis: reAxisDist, vision: reVisionDist },
-        near: { sph: reSphNear, cyl: reCylNear, axis: reAxisNear, vision: reVisionNear },
+        near: { sph: "", cyl: "", axis: "", vision: reVisionNear },
         add: reAdd
       };
 
       const leftEyeData: EyePower = {
         distance: { sph: leSphDist, cyl: leCylDist, axis: leAxisDist, vision: leVisionDist },
-        near: { sph: leSphNear, cyl: leCylNear, axis: leAxisNear, vision: leVisionNear },
+        near: { sph: "", cyl: "", axis: "", vision: leVisionNear },
         add: leAdd
       };
 
@@ -486,41 +448,23 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
         notes: notes.trim()
       };
 
-      if (isDemoMode) {
-        const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
-        const list = JSON.parse(stored);
-        list.push(finalRx);
-        localStorage.setItem('hb_demo_prescriptions', JSON.stringify(list));
-        setActiveCreatedRx(finalRx);
-        setSuccessModal({
-          show: true,
-          title: "Prescription Finalized",
-          message: `Spectacle Rx ${prescriptionId} finalized. Patient ${finalPatientId} registered.`,
-          rxId: prescriptionId,
-          patientId: finalPatientId
-        });
-      } else {
-        const rxDocRef = doc(db, 'prescriptions', prescriptionId);
-        await setDoc(rxDocRef, {
-          ...finalRx,
-          createdAt: serverTimestamp()
-        }).catch(err => {
-          handleFirestoreError(err, OperationType.CREATE, `prescriptions/${prescriptionId}`);
-        });
-
-        setActiveCreatedRx(finalRx);
-        setSuccessModal({
-          show: true,
-          title: "Database Sync Complete",
-          message: `Ophthalmic Spectacle Rx ${prescriptionId} synchronized with clinic database for Patient ${finalPatientId}.`,
-          rxId: prescriptionId,
-          patientId: finalPatientId
-        });
-      }
+      const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
+      const list = JSON.parse(stored);
+      list.push(finalRx);
+      localStorage.setItem('hb_demo_prescriptions', JSON.stringify(list));
+      setActiveCreatedRx(finalRx);
+      setSuccessModal({
+        show: true,
+        title: "Prescription Finalized",
+        message: `Spectacle Rx ${prescriptionId} finalized. Patient ${finalPatientId} registered.`,
+        rxId: prescriptionId,
+        patientId: finalPatientId
+      });
 
       // Sync to Google Sheets Web App Webhook
       try {
         const flatData = {
+          action: "savePrescription",
           patientId: finalRx.patientId,
           prescriptionId: finalRx.prescriptionId,
           patientName: finalRx.patientName,
@@ -551,7 +495,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
           notes: finalRx.notes
         };
 
-        const gsheetsUrl = "https://script.google.com/macros/s/AKfycbyyxeBKUjjpG7InOmRAHTAEcExQKt3chvyIN7MkO4pZYwID4uWs7uZCjiPG-0cHPlkg/exec";
+        const gsheetsUrl = "https://script.google.com/macros/s/AKfycbzht0FXBeoZK2dF7Lev5GYzCCip1IL27oZ3E-Jgrolvj-UUrRNupxKEVsBUfif6xNWt/exec";
 
         if ((window as any).require) {
           try {
@@ -587,7 +531,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
             fetch(gsheetsUrl, {
               method: "POST",
               mode: "no-cors",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "text/plain;charset=utf-8" },
               body: JSON.stringify(flatData)
             });
           }
@@ -596,7 +540,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
             method: "POST",
             mode: "no-cors",
             headers: {
-              "Content-Type": "application/json"
+              "Content-Type": "text/plain;charset=utf-8"
             },
             body: JSON.stringify(flatData)
           }).then(() => {
@@ -748,12 +692,12 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
     date: date || new Date().toISOString().split('T')[0],
     rightEyeData: {
       distance: { sph: reSphDist || '—', cyl: reCylDist || '—', axis: reAxisDist || '—', vision: reVisionDist || '—' },
-      near: { sph: reSphNear || '—', cyl: reCylNear || '—', axis: reAxisNear || '—', vision: reVisionNear || '—' },
+      near: { sph: '—', cyl: '—', axis: '—', vision: reVisionNear || '—' },
       add: reAdd ? `+${reAdd}` : '—'
     },
     leftEyeData: {
       distance: { sph: leSphDist || '—', cyl: leCylDist || '—', axis: leAxisDist || '—', vision: leVisionDist || '—' },
-      near: { sph: leSphNear || '—', cyl: leCylNear || '—', axis: leAxisNear || '—', vision: leVisionNear || '—' },
+      near: { sph: '—', cyl: '—', axis: '—', vision: leVisionNear || '—' },
       add: leAdd ? `+${leAdd}` : '—'
     },
     pd: pd || '—',
@@ -926,24 +870,33 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
                     <div className="border-t border-dashed border-gray-200 pt-3.5 mt-3.5 space-y-3.5">
                       <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Near Vision parameters</p>
                       <div className="grid grid-cols-2 gap-3.5">
-                        <SearchableSelect
-                          label="Spherical (SPH)"
-                          value={reSphNear}
-                          onChange={setReSphNear}
-                          options={sphOptions}
-                        />
-                        <SearchableSelect
-                          label="Cylindrical (CYL)"
-                          value={reCylNear}
-                          onChange={setReCylNear}
-                          options={cylOptions}
-                        />
-                        <SearchableSelect
-                          label="Axis"
-                          value={reAxisNear}
-                          onChange={setReAxisNear}
-                          options={axisOptions}
-                        />
+                        <div>
+                          <label className="block text-[10px] text-gray-550 mb-1 font-semibold">Spherical (SPH)</label>
+                          <input
+                            type="text"
+                            value="—"
+                            disabled
+                            className="w-full text-xs font-mono border border-gray-300 bg-gray-50 rounded-lg p-1.5 text-gray-400 cursor-not-allowed text-center"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-gray-550 mb-1 font-semibold">Cylindrical (CYL)</label>
+                          <input
+                            type="text"
+                            value="—"
+                            disabled
+                            className="w-full text-xs font-mono border border-gray-300 bg-gray-50 rounded-lg p-1.5 text-gray-400 cursor-not-allowed text-center"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-gray-550 mb-1 font-semibold">Axis</label>
+                          <input
+                            type="text"
+                            value="—"
+                            disabled
+                            className="w-full text-xs font-mono border border-gray-300 bg-gray-50 rounded-lg p-1.5 text-gray-400 cursor-not-allowed text-center"
+                          />
+                        </div>
                         <SearchableSelect
                           label="Acuity (Near)"
                           value={reVisionNear}
@@ -1014,24 +967,33 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
                     <div className="border-t border-dashed border-gray-200 pt-3.5 mt-3.5 space-y-3.5">
                       <p className="text-[10px] uppercase font-bold text-gray-405 tracking-wider">Near Vision parameters</p>
                       <div className="grid grid-cols-2 gap-3.5">
-                        <SearchableSelect
-                          label="Spherical (SPH)"
-                          value={leSphNear}
-                          onChange={setLeSphNear}
-                          options={sphOptions}
-                        />
-                        <SearchableSelect
-                          label="Cylindrical (CYL)"
-                          value={leCylNear}
-                          onChange={setLeCylNear}
-                          options={cylOptions}
-                        />
-                        <SearchableSelect
-                          label="Axis"
-                          value={leAxisNear}
-                          onChange={setLeAxisNear}
-                          options={axisOptions}
-                        />
+                        <div>
+                          <label className="block text-[10px] text-gray-550 mb-1 font-semibold">Spherical (SPH)</label>
+                          <input
+                            type="text"
+                            value="—"
+                            disabled
+                            className="w-full text-xs font-mono border border-gray-300 bg-gray-50 rounded-lg p-1.5 text-gray-400 cursor-not-allowed text-center"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-gray-550 mb-1 font-semibold">Cylindrical (CYL)</label>
+                          <input
+                            type="text"
+                            value="—"
+                            disabled
+                            className="w-full text-xs font-mono border border-gray-300 bg-gray-50 rounded-lg p-1.5 text-gray-400 cursor-not-allowed text-center"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-gray-550 mb-1 font-semibold">Axis</label>
+                          <input
+                            type="text"
+                            value="—"
+                            disabled
+                            className="w-full text-xs font-mono border border-gray-300 bg-gray-50 rounded-lg p-1.5 text-gray-400 cursor-not-allowed text-center"
+                          />
+                        </div>
                         <SearchableSelect
                           label="Acuity (Near)"
                           value={leVisionNear}

@@ -37,7 +37,7 @@ export default function Layout({ activeTab, setActiveTab, children }: LayoutProp
       id: 'prescription', 
       label: 'Rx Prescription Desk', 
       icon: FileSpreadsheet, 
-      roles: ['admin', 'doctor'] as UserRole[] 
+      roles: ['doctor'] as UserRole[] 
     },
     { 
       id: 'history', 

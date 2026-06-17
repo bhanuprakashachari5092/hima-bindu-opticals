@@ -78,5 +78,11 @@ service cloud.firestore {
       allow create, update: if isSignedIn() && (isUserAdmin() || isUserDoctor());
       allow delete: if isSignedIn() && isUserAdmin();
     }
+
+    // Login Logs Collection rules
+    match /login_logs/{logId} {
+      allow create: if isSignedIn();
+      allow read: if isSignedIn() && isUserAdmin();
+    }
   }
 }

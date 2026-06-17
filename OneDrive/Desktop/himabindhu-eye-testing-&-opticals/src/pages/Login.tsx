@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { signOut } from 'firebase/auth';
+import { auth } from '../config/firebase';
 import { 
   Lock, 
   ShieldAlert, 
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export default function Login() {
-  const { setDemoProfile, loading, isDemoMode } = useAuth();
+  const { loginWithEmail, commitLogin, logout, loading } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,81 +30,32 @@ export default function Login() {
     setLocalError(null);
     setSubmitting(true);
 
-    const emailClean = email.trim().toLowerCase();
-    const passClean = password.trim();
-
-    if (loginTab === 'admin') {
-      // Admin static login
-      if (emailClean === 'admin@gmail.com' && passClean === 'admin') {
-        const name = 'Himabindhu (Admin)';
-        const role = 'admin';
-        setLoggedUserName(name);
-        setLoggedUserRole(role);
-        setSuccessLogin(true);
-        setSubmitting(false);
-        setTimeout(() => {
-          setDemoProfile(role, name);
-        }, 1600);
-      } else {
-        setLocalError('Invalid Admin credentials.');
-        setSubmitting(false);
+    try {
+      const { profile, isDemo } = await loginWithEmail(email, password);
+      
+      // Enforce Admin vs. Staff tab restrictions
+      if (loginTab === 'admin' && profile.role !== 'admin') {
+        await signOut(auth);
+        sessionStorage.removeItem('hb_login_in_progress');
+        throw new Error("Please login on staff login");
       }
-      return;
-    }
-
-    // Receptionist Login
-    let matchedUser = null;
-
-    // 1. Try finding in localStorage first
-    const stored = localStorage.getItem('hb_demo_users');
-    if (stored) {
-      try {
-        const list = JSON.parse(stored);
-        matchedUser = list.find((u: any) => 
-          u.email.toLowerCase() === emailClean && 
-          u.password === passClean && 
-          u.role === 'receptionist'
-        );
-      } catch (e) {
-        console.error("Failed to parse local user registry:", e);
+      if (loginTab === 'receptionist' && profile.role === 'admin') {
+        await signOut(auth);
+        sessionStorage.removeItem('hb_login_in_progress');
+        throw new Error("Please login on Admin Login");
       }
-    }
 
-    // 2. Try finding in Firestore if not found in localStorage
-    if (!matchedUser) {
-      try {
-        const usersRef = collection(db, 'users');
-        const qSnap = await getDocs(usersRef);
-        const list = qSnap.docs.map(doc => doc.data());
-        matchedUser = list.find((u: any) => 
-          u.email.toLowerCase() === emailClean && 
-          u.password === passClean && 
-          u.role === 'receptionist'
-        );
-      } catch (err) {
-        console.warn("Firestore user query failed, checking fallbacks...", err);
-      }
-    }
-
-    // 3. Fallback to hardcoded default demo receptionist if registry is empty
-    if (!matchedUser) {
-      if (emailClean === 'receptionist@gmail.com' && passClean === 'receptionist') {
-        matchedUser = { name: 'Venkata Laxmi (Receptionist)' };
-      }
-    }
-
-    if (matchedUser) {
-      const name = matchedUser.name;
-      const role = 'receptionist';
-      setLoggedUserName(name);
-      setLoggedUserRole(role);
+      setLoggedUserName(profile.name);
+      setLoggedUserRole(profile.role);
       setSuccessLogin(true);
       setSubmitting(false);
+      
       setTimeout(() => {
-        setDemoProfile(role, name);
+        commitLogin(profile, isDemo);
       }, 1600);
-    } else {
-      setLocalError('Invalid Receptionist credentials or password.');
+    } catch (err: any) {
+      sessionStorage.removeItem('hb_login_in_progress');
+      setLocalError(err.message || 'Invalid credentials or password. Please verify your registered email and password.');
       setSubmitting(false);
     }
   };
@@ -179,7 +130,7 @@ export default function Login() {
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
-              Receptionist Login
+              Staff Login
             </button>
             <button
               type="button"

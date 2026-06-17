@@ -8,6 +8,10 @@
   --font-telugu: "Ramabhadra", "Mallanna", "Outfit", sans-serif;
 }
 
+html {
+  font-size: 17.5px;
+}
+
 body {
   user-select: text;
   -webkit-user-select: text;
@@ -20,6 +24,7 @@ body {
   -webkit-font-smoothing: antialiased;
   letter-spacing: 0.015em;
   line-height: 1.6;
+  font-size: 1.025rem;
 }
 
 /* Premium Custom Scrollbars */
@@ -192,3 +197,12 @@ input, textarea {
   -moz-user-select: text !important;
   -ms-user-select: text !important;
 }
+
+/* Override absolute/fixed pixel font sizes to make tiny text readable */
+.text-\[8\.5px\] { font-size: 10px !important; }
+.text-\[9px\] { font-size: 10.5px !important; }
+.text-\[9\.5px\] { font-size: 11px !important; }
+.text-\[10px\] { font-size: 12px !important; }
+.text-\[10\.5px\] { font-size: 12.5px !important; }
+.text-\[11px\] { font-size: 13px !important; }
+.text-\[12px\] { font-size: 14px !important; }
