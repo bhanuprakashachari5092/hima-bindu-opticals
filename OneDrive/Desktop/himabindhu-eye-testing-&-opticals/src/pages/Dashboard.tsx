@@ -316,9 +316,9 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
         totalCount: current.length
       }));
 
-      // POST to Google Sheets
+      // POST to Google Sheets (Background Sync for Ultra Fast UI)
       try {
-        await fetch(APPS_SCRIPT_URL, {
+        fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -338,9 +338,11 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
             leNearSph: "", leNearCyl: "", leNearAxis: "", leNearVision: "J1", leAdd: "",
             pd: "", advice: "", notes: ""
           })
+        }).catch(sheetErr => {
+          console.warn("Failed to POST registered patient to Google Sheets in background:", sheetErr);
         });
       } catch (sheetErr) {
-        console.warn("Failed to POST registered patient to Google Sheets:", sheetErr);
+        console.warn("Failed to initiate POST to Google Sheets:", sheetErr);
       }
 
       setRegisteredPatientForWhatsApp(newPatient);
@@ -604,7 +606,8 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
       setRecentPrescriptions(prev => prev.map(p => p.prescriptionId === selectedRx.prescriptionId ? updatedRx : p));
       setIsOrderSent(false);
 
-      await syncOrderToGoogleSheet(updatedRx, {
+      // Fire and forget background sync to Google Sheets for ultra fast UI
+      syncOrderToGoogleSheet(updatedRx, {
         frameName: frameName.trim(),
         lensType: lensType.trim(),
         orderPrice: actVal || orderPrice.trim(),
