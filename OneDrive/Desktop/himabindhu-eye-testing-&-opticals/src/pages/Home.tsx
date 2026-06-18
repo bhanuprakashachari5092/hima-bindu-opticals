@@ -191,28 +191,28 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
           const resData = await response.json();
           if (Array.isArray(resData)) {
             const mappedData: Prescription[] = resData.map((item: any) => ({
-              prescriptionId: item.PrescriptionID || '',
-              patientId: item.PatientID || '',
-              patientName: item.PatientName || '',
-              mobile: String(item.Mobile || ''),
-              age: Number(item.Age || 0),
-              gender: item.Gender || 'Male',
-              date: item.Date ? item.Date.split('T')[0] : '',
-              pd: String(item.PD || ''),
-              advice: item.Advice ? item.Advice.split(',').map((s: string) => s.trim()) : [],
-              notes: item.Notes || '',
-              frameName: item.FrameName || '',
-              lensType: item.LensType || '',
-              orderStatus: item.DeliveryStatus || '',
+              prescriptionId: item['Prescription ID'] || item.PrescriptionID || item.prescriptionId || '',
+              patientId: item['Patient ID'] || item.PatientID || item.patientId || '',
+              patientName: item['Patient Name'] || item.PatientName || item.patientName || item.name || '',
+              mobile: String(item['Mobile'] || item.mobile || ''),
+              age: Number(item['Age'] || item.age || 0),
+              gender: item['Gender'] || item.gender || 'Male',
+              date: (item['Date'] || item.date || '').split('T')[0],
+              pd: String(item['PD'] || item.pd || ''),
+              advice: (item['Advice'] || item.advice) ? String(item['Advice'] || item.advice).split(',').map((s: string) => s.trim()) : [],
+              notes: item['Notes'] || item.notes || '',
+              frameName: item['FrameName'] || item['Frame Name'] || item.frameName || '',
+              lensType: item['LensType'] || item['Lens Type'] || item.lensType || '',
+              orderStatus: item['DeliveryStatus'] || item['Delivery Status'] || item.orderStatus || '',
               rightEyeData: {
-                distance: { sph: String(item.RESPH || ''), cyl: String(item.RECYL || ''), axis: String(item.REAXIS || ''), vision: item.REVision || '' },
-                near: { sph: '', cyl: '', axis: '', vision: item.RENearVision || '' },
-                add: String(item.REAdd || '')
+                distance: { sph: String(item['RE SPH'] || item.RESPH || ''), cyl: String(item['RE CYL'] || item.RECYL || ''), axis: String(item['RE AXIS'] || item.REAXIS || ''), vision: item['RE Vision'] || item.REVision || '' },
+                near: { sph: '', cyl: '', axis: '', vision: item['RE Near Vision'] || item.RENearVision || '' },
+                add: String(item['RE Add'] || item.REAdd || '')
               },
               leftEyeData: {
-                distance: { sph: String(item.LESPH || ''), cyl: String(item.LECYL || ''), axis: String(item.LEAXIS || ''), vision: item.LEVision || '' },
-                near: { sph: '', cyl: '', axis: '', vision: item.LENearVision || '' },
-                add: String(item.LEAdd || '')
+                distance: { sph: String(item['LE SPH'] || item.LESPH || ''), cyl: String(item['LE CYL'] || item.LECYL || ''), axis: String(item['LE AXIS'] || item.LEAXIS || ''), vision: item['LE Vision'] || item.LEVision || '' },
+                near: { sph: '', cyl: '', axis: '', vision: item['LE Near Vision'] || item.LENearVision || '' },
+                add: String(item['LE Add'] || item.LEAdd || '')
               }
             }));
             setCachedRecords(mappedData);
