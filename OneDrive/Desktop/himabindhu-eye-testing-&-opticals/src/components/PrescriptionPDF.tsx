@@ -438,14 +438,33 @@ export function printPrescriptionHTML(rx: Prescription) {
         ${styleNodes}
         <style>
           @media print {
-            body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background-color: white !important; margin: 0; padding: 0; }
-            @page { size: auto; margin: 5mm; }
+            @page { size: A4 portrait; margin: 0; }
+            body { 
+              -webkit-print-color-adjust: exact !important; 
+              print-color-adjust: exact !important; 
+              background-color: white !important; 
+              margin: 0 !important; 
+              padding: 0 !important; 
+            }
+            .a4-print-wrapper {
+              width: 210mm;
+              height: 296mm;
+              padding: 15mm;
+              box-sizing: border-box;
+              margin: 0 auto;
+              overflow: hidden;
+              page-break-after: avoid;
+              page-break-before: avoid;
+            }
           }
           body { background: white; padding: 20px; font-family: ui-sans-serif, system-ui, sans-serif; }
+          .a4-print-wrapper { width: 100%; max-width: 800px; margin: 0 auto; }
         </style>
       </head>
       <body onload="setTimeout(function(){ window.print(); }, 1500)">
-        ${htmlContent}
+        <div class="a4-print-wrapper">
+          ${htmlContent}
+        </div>
       </body>
     </html>
   `;
