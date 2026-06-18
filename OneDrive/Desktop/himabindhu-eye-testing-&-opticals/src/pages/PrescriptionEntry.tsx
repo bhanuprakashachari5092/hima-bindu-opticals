@@ -495,7 +495,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
           notes: finalRx.notes
         };
 
-        const gsheetsUrl = "https://script.google.com/macros/s/AKfycbzht0FXBeoZK2dF7Lev5GYzCCip1IL27oZ3E-Jgrolvj-UUrRNupxKEVsBUfif6xNWt/exec";
+        const gsheetsUrl = "https://script.google.com/macros/s/AKfycbwin877dfuTnQuvzaSifRtDBtkqbsUG7ULF2RxwJH9-t65AUOC9QAs_quXTgPdmncJW/exec";
 
         if ((window as any).require) {
           try {

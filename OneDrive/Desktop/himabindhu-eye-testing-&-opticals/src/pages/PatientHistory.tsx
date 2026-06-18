@@ -29,7 +29,7 @@ import { CustomPowerSelect } from '../components/CustomPowerSelect';
 
 const { positives, negatives } = generateSphCylOptions();
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby6GwqVZVNk4vR9wsMN8PMqZW-hsJuscR5JscUfNMf7pTdC7ykcrrONURgIM2p0qcHO/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwin877dfuTnQuvzaSifRtDBtkqbsUG7ULF2RxwJH9-t65AUOC9QAs_quXTgPdmncJW/exec";
 
 interface PatientHistoryProps {
   selectedRxFromOutside: Prescription | null;

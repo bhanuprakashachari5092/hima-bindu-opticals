@@ -186,7 +186,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
   React.useEffect(() => {
     const fetchAll = async () => {
       try {
-        const response = await fetch(`https://script.google.com/macros/s/AKfycbzht0FXBeoZK2dF7Lev5GYzCCip1IL27oZ3E-Jgrolvj-UUrRNupxKEVsBUfif6xNWt/exec`);
+        const response = await fetch(`https://script.google.com/macros/s/AKfycbwin877dfuTnQuvzaSifRtDBtkqbsUG7ULF2RxwJH9-t65AUOC9QAs_quXTgPdmncJW/exec`);
         if (response.ok) {
           const resData = await response.json();
           if (Array.isArray(resData)) {
@@ -361,7 +361,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
 
     try {
       // Fetch directly from Google Sheets Web App endpoint
-      const gsheetsUrl = `https://script.google.com/macros/s/AKfycbzht0FXBeoZK2dF7Lev5GYzCCip1IL27oZ3E-Jgrolvj-UUrRNupxKEVsBUfif6xNWt/exec`;
+      const gsheetsUrl = `https://script.google.com/macros/s/AKfycbwin877dfuTnQuvzaSifRtDBtkqbsUG7ULF2RxwJH9-t65AUOC9QAs_quXTgPdmncJW/exec`;
       
       try {
         const response = await fetch(gsheetsUrl);
