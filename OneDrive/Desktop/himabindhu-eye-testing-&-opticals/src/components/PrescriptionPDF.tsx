@@ -500,8 +500,13 @@ export function PrescriptionPDFViewerPanel({ prescription }: PrescriptionPDFProp
 
   const handleSendWhatsApp = () => {
     const rx = prescription;
-    const cleanPhone = rx.mobile.replace(/\D/g, '');
+    const cleanPhone = String(rx.mobile || '').replace(/\D/g, '');
     const targetPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+    
+    if (!targetPhone) {
+      alert("Please provide a valid mobile number.");
+      return;
+    }
     
     const fmt = (v: string | undefined) => (v && v !== '—' && v !== '') ? v : '—';
     const msg = [
@@ -530,7 +535,7 @@ export function PrescriptionPDFViewerPanel({ prescription }: PrescriptionPDFProp
       `_This is your digital eye prescription. Thank you! 🙏_`
     ].filter(v => v !== null).join('\n');
     
-    const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
+    const url = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
   };
 

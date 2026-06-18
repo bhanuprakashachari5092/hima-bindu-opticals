@@ -505,7 +505,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
               const options = {
                 method: 'POST',
                 headers: {
-                  'Content-Type': 'application/json',
+                  'Content-Type': 'text/plain;charset=utf-8',
                 }
               };
 
@@ -562,7 +562,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
 
   // ── WhatsApp Send Handler ──────────────────────────────────────────────────
   const handleSendWhatsApp = () => {
-    let targetPhone = mobile.trim().replace(/\D/g, '');
+    let targetPhone = String(mobile || '').trim().replace(/\D/g, '');
     if (!targetPhone) {
       alert("Please enter a valid mobile number for the patient first.");
       return;
@@ -632,7 +632,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
       .catch(err => {
         console.error("Green API Error:", err);
         alert("WhatsApp API send failed. Opening web link instead...");
-        window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+        window.open(`https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(msg)}`, '_blank');
       });
       return;
     }
@@ -662,7 +662,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
       .catch(err => {
         console.error("UltraMsg Error:", err);
         alert("WhatsApp API send failed. Opening web link instead...");
-        window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+        window.open(`https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(msg)}`, '_blank');
       });
       return;
     }
@@ -677,7 +677,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
       }
     }
 
-    const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
+    const url = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
   };
   // ────────────────────────────────────────────────────────────────────────────

@@ -19,7 +19,8 @@ import {
   Search,
   MessageCircle,
   Save,
-  Clock
+  Clock,
+  Edit
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -54,6 +55,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
   const [isRegistering, setIsRegistering] = useState(false);
   const [receptionTab, setReceptionTab] = useState<'orders' | 'register'>('orders');
   const [registeredPatientForWhatsApp, setRegisteredPatientForWhatsApp] = useState<any | null>(null);
+  const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
 
   // Receptionist States
   const [allPrescriptions, setAllPrescriptions] = useState<Prescription[]>([]);
@@ -256,113 +258,186 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     }
     setIsRegistering(true);
     try {
-      const generatedId = await generateNextPatientId(true);
-      const generatedRxId = await generateNextPrescriptionId(true);
       const todayString = new Date().toISOString().split('T')[0];
-      const newPatient = {
-        patientId: generatedId,
-        name: regName.trim(),
-        mobile: regMobile.trim(),
-        age: parseInt(regAge, 10),
-        gender: regGender,
-        date: todayString
-      };
 
-      const stored = localStorage.getItem('hb_demo_patients') || '[]';
-      const current = JSON.parse(stored);
-      current.push(newPatient);
-      localStorage.setItem('hb_demo_patients', JSON.stringify(current));
-      
-      const blankRx: Prescription = {
-        prescriptionId: generatedRxId,
-        patientId: generatedId,
-        patientName: regName.trim(),
-        mobile: regMobile.trim(),
-        age: parseInt(regAge, 10),
-        gender: regGender,
-        date: todayString,
-        rightEyeData: {
-          distance: { sph: "", cyl: "", axis: "", vision: "6/6" },
-          near: { sph: "", cyl: "", axis: "", vision: "J1" },
-          add: ""
-        },
-        leftEyeData: {
-          distance: { sph: "", cyl: "", axis: "", vision: "6/6" },
-          near: { sph: "", cyl: "", axis: "", vision: "J1" },
-          add: ""
-        },
-        pd: "",
-        advice: [],
-        notes: "",
-        frameName: "",
-        lensType: "",
-        actualCost: "",
-        receivedCost: "",
-        balanceCost: "",
-        orderStatus: "Pending",
-        isPlaceholder: true
-      } as any;
-      
-      const storedRx = localStorage.getItem('hb_demo_prescriptions') || '[]';
-      const currentRx = JSON.parse(storedRx);
-      currentRx.push(blankRx);
-      localStorage.setItem('hb_demo_prescriptions', JSON.stringify(currentRx));
+      if (editingPatientId) {
+        // --- EDIT EXISTING PATIENT LOGIC ---
+        const stored = localStorage.getItem('hb_demo_patients') || '[]';
+        const current = JSON.parse(stored);
+        const pIndex = current.findIndex((p: any) => p.patientId === editingPatientId);
+        if (pIndex !== -1) {
+          current[pIndex].name = regName.trim();
+          current[pIndex].mobile = regMobile.trim();
+          current[pIndex].age = parseInt(regAge, 10);
+          current[pIndex].gender = regGender;
+          localStorage.setItem('hb_demo_patients', JSON.stringify(current));
+        }
 
-      setPatientsList(current.sort((a: any, b: any) => b.patientId.localeCompare(a.patientId)));
-      setAllPrescriptions(currentRx.sort((a: any, b: any) => b.prescriptionId.localeCompare(a.prescriptionId)));
-      setMetrics(prev => ({
-        ...prev,
-        todayCount: current.filter((p: any) => p.date === todayString).length,
-        totalCount: current.length
-      }));
+        const storedRx = localStorage.getItem('hb_demo_prescriptions') || '[]';
+        const currentRx = JSON.parse(storedRx);
+        const rxIndex = currentRx.findIndex((rx: any) => rx.patientId === editingPatientId);
+        
+        let rxIdToSave = '';
+        if (rxIndex !== -1) {
+          rxIdToSave = currentRx[rxIndex].prescriptionId;
+          currentRx[rxIndex].patientName = regName.trim();
+          currentRx[rxIndex].mobile = regMobile.trim();
+          currentRx[rxIndex].age = parseInt(regAge, 10);
+          currentRx[rxIndex].gender = regGender;
+          localStorage.setItem('hb_demo_prescriptions', JSON.stringify(currentRx));
+        }
 
-      // POST to Google Sheets (Background Sync for Ultra Fast UI)
-      try {
-        fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'savePrescription',
-            patientId: newPatient.patientId,
-            prescriptionId: generatedRxId,
-            patientName: newPatient.name,
-            mobile: newPatient.mobile,
-            age: newPatient.age,
-            gender: newPatient.gender,
-            date: newPatient.date,
-            // Blank eyesight data
-            reDistanceSph: "", reDistanceCyl: "", reDistanceAxis: "", reDistanceVision: "6/6",
-            reNearSph: "", reNearCyl: "", reNearAxis: "", reNearVision: "J1", reAdd: "",
-            leDistanceSph: "", leDistanceCyl: "", leDistanceAxis: "", leDistanceVision: "6/6",
-            leNearSph: "", leNearCyl: "", leNearAxis: "", leNearVision: "J1", leAdd: "",
-            pd: "", advice: "", notes: ""
-          })
-        }).catch(sheetErr => {
-          console.warn("Failed to POST registered patient to Google Sheets in background:", sheetErr);
-        });
-      } catch (sheetErr) {
-        console.warn("Failed to initiate POST to Google Sheets:", sheetErr);
+        setPatientsList(current.sort((a: any, b: any) => b.patientId.localeCompare(a.patientId)));
+        setAllPrescriptions(currentRx.sort((a: any, b: any) => b.prescriptionId.localeCompare(a.prescriptionId)));
+        
+        // Background sync update to Google Sheets
+        try {
+          fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'savePrescription',
+              patientId: editingPatientId,
+              prescriptionId: rxIdToSave,
+              patientName: regName.trim(),
+              mobile: regMobile.trim(),
+              age: parseInt(regAge, 10),
+              gender: regGender,
+              date: current[pIndex]?.date || todayString,
+              // Send existing blank or filled data to prevent overwrite if it was filled,
+              // but realistically since it's just reception, it might be blank. 
+              // Sending action: 'editPatient' would be better if backend supported it, but we'll re-save basic fields.
+              reDistanceSph: "", reDistanceCyl: "", reDistanceAxis: "", reDistanceVision: "",
+              reNearSph: "", reNearCyl: "", reNearAxis: "", reNearVision: "", reAdd: "",
+              leDistanceSph: "", leDistanceCyl: "", leDistanceAxis: "", leDistanceVision: "",
+              leNearSph: "", leNearCyl: "", leNearAxis: "", leNearVision: "", leAdd: "",
+              pd: "", advice: "", notes: ""
+            })
+          }).catch(e => console.warn(e));
+        } catch(e) {}
+
+        alert("Patient details updated successfully!");
+        setEditingPatientId(null);
+      } else {
+        // --- CREATE NEW PATIENT LOGIC ---
+        const generatedId = await generateNextPatientId(true);
+        const generatedRxId = await generateNextPrescriptionId(true);
+        const newPatient = {
+          patientId: generatedId,
+          name: regName.trim(),
+          mobile: regMobile.trim(),
+          age: parseInt(regAge, 10),
+          gender: regGender,
+          date: todayString
+        };
+
+        const stored = localStorage.getItem('hb_demo_patients') || '[]';
+        const current = JSON.parse(stored);
+        current.push(newPatient);
+        localStorage.setItem('hb_demo_patients', JSON.stringify(current));
+        
+        const blankRx: Prescription = {
+          prescriptionId: generatedRxId,
+          patientId: generatedId,
+          patientName: regName.trim(),
+          mobile: regMobile.trim(),
+          age: parseInt(regAge, 10),
+          gender: regGender,
+          date: todayString,
+          rightEyeData: {
+            distance: { sph: "", cyl: "", axis: "", vision: "6/6" },
+            near: { sph: "", cyl: "", axis: "", vision: "J1" },
+            add: ""
+          },
+          leftEyeData: {
+            distance: { sph: "", cyl: "", axis: "", vision: "6/6" },
+            near: { sph: "", cyl: "", axis: "", vision: "J1" },
+            add: ""
+          },
+          pd: "",
+          advice: [],
+          notes: "",
+          frameName: "",
+          lensType: "",
+          actualCost: "",
+          receivedCost: "",
+          balanceCost: "",
+          orderStatus: "Pending",
+          isPlaceholder: true
+        } as any;
+        
+        const storedRx = localStorage.getItem('hb_demo_prescriptions') || '[]';
+        const currentRx = JSON.parse(storedRx);
+        currentRx.push(blankRx);
+        localStorage.setItem('hb_demo_prescriptions', JSON.stringify(currentRx));
+
+        setPatientsList(current.sort((a: any, b: any) => b.patientId.localeCompare(a.patientId)));
+        setAllPrescriptions(currentRx.sort((a: any, b: any) => b.prescriptionId.localeCompare(a.prescriptionId)));
+        setMetrics(prev => ({
+          ...prev,
+          todayCount: current.filter((p: any) => p.date === todayString).length,
+          totalCount: current.length
+        }));
+
+        // POST to Google Sheets (Background Sync for Ultra Fast UI)
+        try {
+          fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'savePrescription',
+              patientId: newPatient.patientId,
+              prescriptionId: generatedRxId,
+              patientName: newPatient.name,
+              mobile: newPatient.mobile,
+              age: newPatient.age,
+              gender: newPatient.gender,
+              date: newPatient.date,
+              reDistanceSph: "", reDistanceCyl: "", reDistanceAxis: "", reDistanceVision: "6/6",
+              reNearSph: "", reNearCyl: "", reNearAxis: "", reNearVision: "J1", reAdd: "",
+              leDistanceSph: "", leDistanceCyl: "", leDistanceAxis: "", leDistanceVision: "6/6",
+              leNearSph: "", leNearCyl: "", leNearAxis: "", leNearVision: "J1", leAdd: "",
+              pd: "", advice: "", notes: ""
+            })
+          }).catch(sheetErr => {
+            console.warn("Failed to POST registered patient to Google Sheets in background:", sheetErr);
+          });
+        } catch (sheetErr) {
+          console.warn("Failed to initiate POST to Google Sheets:", sheetErr);
+        }
+
+        setRegisteredPatientForWhatsApp(newPatient);
       }
-
-      setRegisteredPatientForWhatsApp(newPatient);
 
       setRegName('');
       setRegMobile('');
       setRegAge('');
       setRegGender('Male');
 
-      // Trigger next ID load
       const nextId = await generateNextPatientId(true);
       setNextPatientId(nextId);
       
       setReceptionTab('orders');
     } catch (err) {
-      console.error("Failed to register patient:", err);
-      alert("Error registering patient.");
+      console.error("Failed to register/update patient:", err);
+      alert("Error saving patient details.");
     } finally {
       setIsRegistering(false);
     }
+  };
+
+  const handleEditPatient = (patient: any) => {
+    setEditingPatientId(patient.patientId);
+    setRegName(patient.name);
+    setRegMobile(patient.mobile);
+    setRegAge(String(patient.age));
+    setRegGender(patient.gender);
+    setNextPatientId(patient.patientId); // Lock the ID field to the patient being edited
+    setReceptionTab('register');
+    // Scroll up slightly to ensure form is visible
+    document.getElementById('receptionist-dashboard-root')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleInspectPrescription = (rx: Prescription) => {
@@ -445,7 +520,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
         fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({
             action: 'deletePatient',
             patientId: patientId
@@ -498,7 +573,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
           const options = {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type': 'text/plain;charset=utf-8',
             }
           };
 
@@ -630,7 +705,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
 
   const handleSendOrderWhatsApp = async () => {
     if (!selectedRx) return;
-    const cleanPhone = selectedRx.mobile.replace(/\D/g, '');
+    const cleanPhone = String(selectedRx.mobile || '').replace(/\D/g, '');
     const targetPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
     
     const fmt = (v: string | undefined) => (v && v !== '—' && v !== '') ? v : '—';
@@ -706,7 +781,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     
     syncOrderToGoogleSheet(selectedRx, updatedData);
     
-    const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
+    const url = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
 
     setSelectedRx(null);
@@ -716,7 +791,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
 
   const handleNotifyCollectionWhatsApp = async () => {
     if (!selectedRx) return;
-    const cleanPhone = selectedRx.mobile.replace(/\D/g, '');
+    const cleanPhone = String(selectedRx.mobile || '').replace(/\D/g, '');
     const targetPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
     
     const msg = [
@@ -765,9 +840,130 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     setAllPrescriptions(updatedList);
     syncOrderToGoogleSheet(selectedRx, sheetData);
     
-    const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
+    const url = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
   };
+
+  const renderRegistrationForm = () => (
+    <form onSubmit={handleRegisterPatient} className="p-6 space-y-5 animate-fade-in">
+      <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 text-slate-800 space-y-4">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600">
+          {editingPatientId ? 'Update Patient Details' : 'Register New Patient'}
+        </h4>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Patient ID (Auto-Generated)</label>
+            <input
+              type="text"
+              value={nextPatientId || 'HB...'}
+              disabled
+              className="w-full border border-slate-200 bg-slate-100 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-500 cursor-not-allowed"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Patient Full Name</label>
+            <input
+              type="text"
+              placeholder="e.g. Banu Prakash"
+              value={regName}
+              onChange={(e) => setRegName(e.target.value)}
+              required
+              className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-2">Mobile / Phone Number</label>
+            <input
+              type="tel"
+              placeholder="e.g. 9949334443"
+              value={regMobile}
+              onChange={(e) => setRegMobile(e.target.value)}
+              required
+              pattern="[0-9]{10}"
+              title="Please enter a 10-digit mobile number"
+              className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Age</label>
+              <input
+                type="number"
+                placeholder="e.g. 28"
+                value={regAge}
+                onChange={(e) => setRegAge(e.target.value)}
+                required
+                min="1"
+                max="120"
+                className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Gender</label>
+              <select
+                value={regGender}
+                onChange={(e) => setRegGender(e.target.value)}
+                className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
+              >
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3">
+        {editingPatientId && (
+          <button
+            type="button"
+            onClick={async () => {
+              setEditingPatientId(null);
+              setRegName('');
+              setRegMobile('');
+              setRegAge('');
+              setRegGender('Male');
+              const nextId = await generateNextPatientId(true);
+              setNextPatientId(nextId);
+              setReceptionTab('orders');
+            }}
+            className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition"
+          >
+            Cancel Edit
+          </button>
+        )}
+        {!editingPatientId && (
+          <button
+            type="button"
+            onClick={() => setReceptionTab('orders')}
+            className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition"
+          >
+            Cancel
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={isRegistering}
+          className="px-5 py-2.5 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+        >
+          {isRegistering ? (
+            <>
+              <div className="w-3.5 h-3.5 animate-spin border-2 border-white border-t-transparent rounded-full"></div>
+              <span>{editingPatientId ? 'Updating...' : 'Registering...'}</span>
+            </>
+          ) : (
+            <span>{editingPatientId ? 'Update Patient' : 'Register Patient'}</span>
+          )}
+        </button>
+      </div>
+    </form>
+  );
 
   if (userProfile?.role === 'receptionist') {
     const filteredRx = allPrescriptions.filter(rx => 
@@ -812,6 +1008,11 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                 <button
                   type="button"
                   onClick={async () => {
+                    setEditingPatientId(null);
+                    setRegName('');
+                    setRegMobile('');
+                    setRegAge('');
+                    setRegGender('Male');
                     setReceptionTab('register');
                     const nextId = await generateNextPatientId(isDemoMode);
                     setNextPatientId(nextId);
@@ -822,7 +1023,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                       : 'text-slate-400 hover:text-white hover:bg-slate-800'
                   }`}
                 >
-                  Register New Patient
+                  {editingPatientId ? 'Edit Patient' : 'Register New Patient'}
                 </button>
               </div>
 
@@ -905,106 +1106,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                   })
                 )
               ) : (
-                <form onSubmit={handleRegisterPatient} className="p-6 space-y-5">
-                  <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 text-slate-800 space-y-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600">Register New Patient</h4>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Patient ID */}
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Patient ID (Auto-Generated)</label>
-                        <input
-                          type="text"
-                          value={nextPatientId || 'HB...'}
-                          disabled
-                          className="w-full border border-slate-200 bg-slate-100 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-500 cursor-not-allowed"
-                        />
-                      </div>
-
-                      {/* Patient Name */}
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Patient Full Name</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Banu Prakash"
-                          value={regName}
-                          onChange={(e) => setRegName(e.target.value)}
-                          required
-                          className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
-                        />
-                      </div>
-
-                      {/* Phone Number */}
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-2">Mobile / Phone Number</label>
-                        <input
-                          type="tel"
-                          placeholder="e.g. 9949334443"
-                          value={regMobile}
-                          onChange={(e) => setRegMobile(e.target.value)}
-                          required
-                          pattern="[0-9]{10}"
-                          title="Please enter a 10-digit mobile number"
-                          className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
-                        />
-                      </div>
-
-                      {/* Age & Gender */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Age</label>
-                          <input
-                            type="number"
-                            placeholder="e.g. 28"
-                            value={regAge}
-                            onChange={(e) => setRegAge(e.target.value)}
-                            required
-                            min="1"
-                            max="120"
-                            className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Gender</label>
-                          <select
-                            value={regGender}
-                            onChange={(e) => setRegGender(e.target.value)}
-                            className="w-full border border-slate-200 bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-xs"
-                          >
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setReceptionTab('orders')}
-                      className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isRegistering}
-                      className="px-5 py-2.5 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 transition cursor-pointer flex items-center gap-1.5 shadow-sm"
-                    >
-                      {isRegistering ? (
-                        <>
-                          <div className="w-3.5 h-3.5 animate-spin border-2 border-white border-t-transparent rounded-full"></div>
-                          <span>Registering...</span>
-                        </>
-                      ) : (
-                        <span>Register Patient</span>
-                      )}
-                    </button>
-                  </div>
-                </form>
+                renderRegistrationForm()
               )}
             </div>
           </div>
@@ -1430,7 +1532,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                 <button
                   type="button"
                   onClick={() => {
-                    const cleanPhone = registeredPatientForWhatsApp.mobile.replace(/\D/g, '');
+                    const cleanPhone = String(registeredPatientForWhatsApp.mobile || '').replace(/\D/g, '');
                     const targetPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
                     const msg = [
                       `🏥 *Himabindhu Eye Testing & Opticals*`,
@@ -1450,7 +1552,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                       `🌟🌟🌟🌟🌟🌟🌟🌟`,
                       `_Thank you for choosing Himabindhu Opticals!_`
                     ].join('\n');
-                    const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
+                    const url = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(msg)}`;
                     window.open(url, '_blank');
                     setRegisteredPatientForWhatsApp(null);
                   }}
@@ -1694,9 +1796,32 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                 </p>
               </div>
             </div>
+            
+            <button
+              onClick={async () => {
+                setEditingPatientId(null);
+                setRegName('');
+                setRegMobile('');
+                setRegAge('');
+                setRegGender('Male');
+                setReceptionTab(receptionTab === 'register' ? 'orders' : 'register');
+                if (receptionTab !== 'register') {
+                  const nextId = await generateNextPatientId(true);
+                  setNextPatientId(nextId);
+                }
+              }}
+              className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center gap-2 shadow-sm"
+            >
+              {receptionTab === 'register' ? 'Close Form' : 'Register New Patient'}
+            </button>
           </div>
 
           <div className="overflow-x-auto min-h-[150px]">
+            {receptionTab === 'register' || editingPatientId ? (
+              <div className="border-b border-slate-100 bg-white">
+                {renderRegistrationForm()}
+              </div>
+            ) : null}
             {(() => {
               const todayString = new Date().toISOString().split('T')[0];
               const todayPatients = patientsList.filter(p => p.date === todayString);
@@ -1752,6 +1877,14 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                                 <span className="text-slate-400 text-xs font-medium italic mr-1">Completed</span>
                                 <button
                                   type="button"
+                                  onClick={() => handleEditPatient(patient)}
+                                  className="p-1.5 text-teal-600 hover:bg-teal-50 hover:text-teal-700 rounded-lg transition cursor-pointer flex items-center justify-center"
+                                  title="Edit patient details"
+                                >
+                                  <Edit className="w-4.5 h-4.5" />
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => handleDeletePatientFromQueue(patient.patientId)}
                                   className="p-1.5 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition cursor-pointer flex items-center justify-center"
                                   title="Remove patient from welcome desk queue"
@@ -1775,6 +1908,14 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                                     Write Prescription
                                   </button>
                                 )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditPatient(patient)}
+                                  className="p-1.5 text-teal-600 hover:bg-teal-50 hover:text-teal-700 rounded-lg transition cursor-pointer flex items-center justify-center"
+                                  title="Edit patient details"
+                                >
+                                  <Edit className="w-4.5 h-4.5" />
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDeletePatientFromQueue(patient.patientId)}

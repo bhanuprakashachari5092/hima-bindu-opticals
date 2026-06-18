@@ -180,6 +180,87 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedRx, setSelectedRx] = useState<Prescription | null>(null);
 
+  // Cached Records for Live Search
+  const [cachedRecords, setCachedRecords] = useState<Prescription[] | null>(null);
+
+  React.useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const response = await fetch(`https://script.google.com/macros/s/AKfycbzht0FXBeoZK2dF7Lev5GYzCCip1IL27oZ3E-Jgrolvj-UUrRNupxKEVsBUfif6xNWt/exec`);
+        if (response.ok) {
+          const resData = await response.json();
+          if (Array.isArray(resData)) {
+            const mappedData: Prescription[] = resData.map((item: any) => ({
+              prescriptionId: item.PrescriptionID || '',
+              patientId: item.PatientID || '',
+              patientName: item.PatientName || '',
+              mobile: String(item.Mobile || ''),
+              age: Number(item.Age || 0),
+              gender: item.Gender || 'Male',
+              date: item.Date ? item.Date.split('T')[0] : '',
+              pd: String(item.PD || ''),
+              advice: item.Advice ? item.Advice.split(',').map((s: string) => s.trim()) : [],
+              notes: item.Notes || '',
+              frameName: item.FrameName || '',
+              lensType: item.LensType || '',
+              orderStatus: item.DeliveryStatus || '',
+              rightEyeData: {
+                distance: { sph: String(item.RESPH || ''), cyl: String(item.RECYL || ''), axis: String(item.REAXIS || ''), vision: item.REVision || '' },
+                near: { sph: '', cyl: '', axis: '', vision: item.RENearVision || '' },
+                add: String(item.REAdd || '')
+              },
+              leftEyeData: {
+                distance: { sph: String(item.LESPH || ''), cyl: String(item.LECYL || ''), axis: String(item.LEAXIS || ''), vision: item.LEVision || '' },
+                near: { sph: '', cyl: '', axis: '', vision: item.LENearVision || '' },
+                add: String(item.LEAdd || '')
+              }
+            }));
+            setCachedRecords(mappedData);
+          }
+        }
+      } catch (err) {
+        console.warn("Background GSheets fetch failed", err);
+      }
+    };
+    fetchAll();
+  }, []);
+
+  React.useEffect(() => {
+    const queryStr = searchQuery.trim().toLowerCase();
+    if (!queryStr) {
+      setSearchResults([]);
+      setSearched(false);
+      setSearchError(null);
+      return;
+    }
+
+    const doLiveSearch = () => {
+      let recordsToSearch = cachedRecords;
+      
+      if (!recordsToSearch) {
+        const demoRxStr = localStorage.getItem('hb_demo_prescriptions') || '[]';
+        recordsToSearch = JSON.parse(demoRxStr) as Prescription[];
+      }
+
+      const filtered = recordsToSearch.filter(rx => 
+        (rx.patientId && String(rx.patientId).toLowerCase().includes(queryStr)) || 
+        (rx.mobile && String(rx.mobile).replace(/\D/g, '').includes(queryStr.replace(/\D/g, ''))) ||
+        (rx.patientName && String(rx.patientName).toLowerCase().includes(queryStr))
+      );
+
+      setSearchResults(filtered);
+      setSearched(true);
+      if (filtered.length === 0) {
+        setSearchError('No matching diagnostic registers found. Double-check your ID or mobile phone.');
+      } else {
+        setSearchError(null);
+      }
+    };
+
+    const timeoutId = setTimeout(doLiveSearch, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, cachedRecords]);
+
   // Clinic timing and status state
   const [morningHours, setMorningHours] = useState('9:00 a.m. to 2:00 p.m.');
   const [eveningHours, setEveningHours] = useState('4:00 p.m. to 9:00 p.m.');
@@ -280,18 +361,52 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
 
     try {
       // Fetch directly from Google Sheets Web App endpoint
-      const gsheetsUrl = `https://script.google.com/macros/s/AKfycbwmFPrQ7XKDNhpr3p1d0D0OImkd8DlNvhnxmSzNtPMKKmSw81xInATraKA2C7gV6kaW/exec?query=${encodeURIComponent(queryStr)}`;
+      const gsheetsUrl = `https://script.google.com/macros/s/AKfycbzht0FXBeoZK2dF7Lev5GYzCCip1IL27oZ3E-Jgrolvj-UUrRNupxKEVsBUfif6xNWt/exec`;
       
       try {
         const response = await fetch(gsheetsUrl);
         if (response.ok) {
           const resData = await response.json();
-          if (resData.success && Array.isArray(resData.data)) {
-            setSearchResults(resData.data);
-            if (resData.data.length === 0) {
+          if (Array.isArray(resData)) {
+            const mappedData: Prescription[] = resData.map((item: any) => ({
+              prescriptionId: item.PrescriptionID || '',
+              patientId: item.PatientID || '',
+              patientName: item.PatientName || '',
+              mobile: String(item.Mobile || ''),
+              age: Number(item.Age || 0),
+              gender: item.Gender || 'Male',
+              date: item.Date ? item.Date.split('T')[0] : '',
+              pd: String(item.PD || ''),
+              advice: item.Advice ? item.Advice.split(',').map((s: string) => s.trim()) : [],
+              notes: item.Notes || '',
+              frameName: item.FrameName || '',
+              lensType: item.LensType || '',
+              orderStatus: item.DeliveryStatus || '',
+              rightEyeData: {
+                distance: { sph: String(item.RESPH || ''), cyl: String(item.RECYL || ''), axis: String(item.REAXIS || ''), vision: item.REVision || '' },
+                near: { sph: '', cyl: '', axis: '', vision: item.RENearVision || '' },
+                add: String(item.REAdd || '')
+              },
+              leftEyeData: {
+                distance: { sph: String(item.LESPH || ''), cyl: String(item.LECYL || ''), axis: String(item.LEAXIS || ''), vision: item.LEVision || '' },
+                near: { sph: '', cyl: '', axis: '', vision: item.LENearVision || '' },
+                add: String(item.LEAdd || '')
+              }
+            }));
+            
+            const filteredGSheets = mappedData.filter(rx => 
+              (rx.patientId && String(rx.patientId).toLowerCase().includes(queryStr)) || 
+              (rx.mobile && String(rx.mobile).replace(/\D/g, '').includes(queryStr.replace(/\D/g, ''))) ||
+              (rx.patientName && String(rx.patientName).toLowerCase().includes(queryStr))
+            );
+
+            // Update cache as well
+            setCachedRecords(mappedData);
+
+            setSearchResults(filteredGSheets);
+            if (filteredGSheets.length === 0) {
               setSearchError('No matching diagnostic registers found in Google Sheets. Double-check your ID or mobile phone.');
             } else {
-              // Set selectedRx to null so patient lists are shown and the user clicks to open
               setSelectedRx(null);
             }
             setSearching(false);
@@ -306,9 +421,9 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       const demoRxStr = localStorage.getItem('hb_demo_prescriptions') || '[]';
       const list = JSON.parse(demoRxStr) as Prescription[];
       const filtered = list.filter(rx => 
-        rx.patientId.toLowerCase() === queryStr || 
-        rx.mobile.replace(/\D/g, '') === queryStr.replace(/\D/g, '') ||
-        rx.patientName.toLowerCase().includes(queryStr)
+        (rx.patientId && String(rx.patientId).toLowerCase().includes(queryStr)) || 
+        (rx.mobile && String(rx.mobile).replace(/\D/g, '').includes(queryStr.replace(/\D/g, ''))) ||
+        (rx.patientName && String(rx.patientName).toLowerCase().includes(queryStr))
       );
       setSearchResults(filtered);
       if (filtered.length === 0) {

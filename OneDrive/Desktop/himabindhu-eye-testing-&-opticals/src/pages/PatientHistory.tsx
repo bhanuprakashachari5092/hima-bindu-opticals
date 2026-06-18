@@ -665,17 +665,32 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
                     </p>
                     
                     <div className="mt-2.5 flex items-center gap-2 justify-end">
-                      {(userProfile?.role === 'admin' || userProfile?.role === 'doctor') && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeletePrescription(rx);
-                          }}
-                          className="text-[10px] bg-red-50 border border-red-200 text-red-600 px-2.0 py-1.0 rounded font-semibold hover:bg-red-100 flex items-center gap-1 cursor-pointer"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          Delete
-                        </button>
+                      {userProfile?.role !== 'patient' && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleInspect(rx);
+                              handleEditInitialize(rx);
+                            }}
+                            className="text-[10px] bg-teal-50 border border-teal-200 text-teal-600 px-2.0 py-1.0 rounded font-semibold hover:bg-teal-100 flex items-center gap-1 cursor-pointer"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm("Are you sure you want to delete this record?")) {
+                                handleDeletePrescription(rx);
+                              }
+                            }}
+                            className="text-[10px] bg-red-50 border border-red-200 text-red-600 px-2.0 py-1.0 rounded font-semibold hover:bg-red-100 flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Delete
+                          </button>
+                        </>
                       )}
                       <button
                         onClick={(e) => {
@@ -726,8 +741,8 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
               </div>
               
               <div className="flex items-center gap-3">
-                {/* Actions allowed by Roles (Admin or Doctor can edit/delete parameters) */}
-                {(userProfile?.role === 'admin' || userProfile?.role === 'doctor') && !isEditing && (
+                {/* Actions allowed by Roles (Admin, Doctor, Receptionist can edit/delete parameters) */}
+                {userProfile?.role !== 'patient' && !isEditing && (
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditInitialize(selectedRx)}
@@ -740,7 +755,11 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
 
                     {!selectedRx.isPlaceholder && (
                       <button
-                        onClick={() => handleDeletePrescription(selectedRx)}
+                        onClick={() => {
+                          if (window.confirm("Are you sure you want to delete this record?")) {
+                            handleDeletePrescription(selectedRx);
+                          }
+                        }}
                         className="px-3 py-1.5 text-xs rounded-lg font-bold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition flex items-center gap-1.5 cursor-pointer"
                         id="btn-delete-prescription"
                       >
