@@ -189,121 +189,58 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
       isPlaceholder: false
     });
 
-    // 1. Fetch prescriptions
-    try {
-      const res = await fetch(`${APPS_SCRIPT_URL}?action=getPrescriptions`);
-      if (res.ok) {
-        const json = await res.json();
-        if (Array.isArray(json)) {
-          rxList = json.map(mapPrescription);
-          localStorage.setItem('hb_demo_prescriptions', JSON.stringify(rxList));
-          loadedRxFromSheets = true;
-        } else if (json.success && Array.isArray(json.data)) {
-          rxList = json.data.map(mapPrescription);
-          localStorage.setItem('hb_demo_prescriptions', JSON.stringify(rxList));
-          loadedRxFromSheets = true;
+    // Background Sync to pull fresh data silently
+    fetch(`${APPS_SCRIPT_URL}?action=syncAll`)
+      .then(res => res.json())
+      .then(json => {
+        let rawData = Array.isArray(json) ? json : (json.success && Array.isArray(json.data) ? json.data : []);
+        if (rawData.length > 0) {
+          const freshPatients = rawData.map(mapPatient);
+          const freshRx = rawData.map(mapPrescription);
+          
+          localStorage.setItem('hb_demo_patients', JSON.stringify(freshPatients));
+          localStorage.setItem('hb_demo_prescriptions', JSON.stringify(freshRx));
+          
+          // Re-merge
+          const newMergedList: Prescription[] = [...freshRx];
+          freshPatients.forEach((patient) => {
+            const hasRx = freshRx.some(rx => rx.patientId === patient.patientId);
+            if (!hasRx) {
+              const placeholderRx: Prescription = {
+                prescriptionId: `PENDING-${patient.patientId}`,
+                patientId: patient.patientId,
+                patientName: patient.name,
+                mobile: patient.mobile,
+                age: patient.age,
+                gender: patient.gender,
+                date: patient.date,
+                rightEyeData: { distance: { sph: "", cyl: "", axis: "", vision: "6/6" }, near: { sph: "", cyl: "", axis: "", vision: "J1" }, add: "" },
+                leftEyeData: { distance: { sph: "", cyl: "", axis: "", vision: "6/6" }, near: { sph: "", cyl: "", axis: "", vision: "J1" }, add: "" },
+                pd: "", advice: [], notes: "", frameName: "", lensType: "", orderPrice: "", orderStatus: "Pending", isPlaceholder: true
+              } as any;
+              newMergedList.push(placeholderRx);
+            }
+          });
+          
+          newMergedList.sort((a, b) => {
+            const dateA = new Date(a.date).getTime() || 0;
+            const dateB = new Date(b.date).getTime() || 0;
+            if (dateB !== dateA) return dateB - dateA;
+            const isPlaceholderA = (a as any).isPlaceholder ? 1 : 0;
+            const isPlaceholderB = (b as any).isPlaceholder ? 1 : 0;
+            if (isPlaceholderB !== isPlaceholderA) return isPlaceholderB - isPlaceholderA;
+            return b.prescriptionId.localeCompare(a.prescriptionId);
+          });
+          
+          setAllPrescriptions(newMergedList);
         }
-      }
-    } catch (err) {
-      console.warn("Failed to fetch prescriptions from Google Sheets. Using localStorage fallback.", err);
+      })
+      .catch(err => console.warn("Background sync failed:", err));
+
+    if (mergedListFast.length === 0) {
+      setLoading(false);
     }
 
-    if (!loadedRxFromSheets) {
-      const stored = localStorage.getItem('hb_demo_prescriptions') || '[]';
-      try {
-        rxList = JSON.parse(stored) as Prescription[];
-      } catch (e) {
-        console.error("Local data parsing error", e);
-      }
-    }
-
-    // 2. Fetch patients
-    try {
-      const res = await fetch(`${APPS_SCRIPT_URL}?action=getPatients`);
-      if (res.ok) {
-        const json = await res.json();
-        if (Array.isArray(json)) {
-          patientsList = json.map(mapPatient);
-          localStorage.setItem('hb_demo_patients', JSON.stringify(patientsList));
-          loadedPatientsFromSheets = true;
-        } else if (json.success && Array.isArray(json.data)) {
-          patientsList = json.data.map(mapPatient);
-          localStorage.setItem('hb_demo_patients', JSON.stringify(patientsList));
-          loadedPatientsFromSheets = true;
-        }
-      }
-    } catch (err) {
-      console.warn("Failed to fetch patients from Google Sheets. Using localStorage fallback.", err);
-    }
-
-    if (!loadedPatientsFromSheets) {
-      const stored = localStorage.getItem('hb_demo_patients') || '[]';
-      try {
-        patientsList = JSON.parse(stored) || [];
-      } catch (e) {
-        console.error("Local patients parsing error", e);
-      }
-    }
-
-    // 3. Merge Patients without prescriptions as placeholder prescriptions
-    const mergedList: Prescription[] = [...rxList];
-
-    patientsList.forEach((patient) => {
-      const hasRx = rxList.some(rx => rx.patientId === patient.patientId);
-      if (!hasRx) {
-        // Create placeholder prescription
-        const placeholderRx: Prescription = {
-          prescriptionId: `PENDING-${patient.patientId}`,
-          patientId: patient.patientId,
-          patientName: patient.name,
-          mobile: patient.mobile,
-          age: patient.age,
-          gender: patient.gender,
-          date: patient.date,
-          rightEyeData: {
-            distance: { sph: "", cyl: "", axis: "", vision: "6/6" },
-            near: { sph: "", cyl: "", axis: "", vision: "J1" },
-            add: ""
-          },
-          leftEyeData: {
-            distance: { sph: "", cyl: "", axis: "", vision: "6/6" },
-            near: { sph: "", cyl: "", axis: "", vision: "J1" },
-            add: ""
-          },
-          pd: "",
-          advice: [],
-          notes: "",
-          frameName: "",
-          lensType: "",
-          orderPrice: "",
-          orderStatus: "Pending",
-          isPlaceholder: true
-        } as any;
-        mergedList.push(placeholderRx);
-      }
-    });
-
-    try {
-      // Sort: placeholders and newer records at the top
-      mergedList.sort((a, b) => {
-        const dateA = new Date(a.date).getTime() || 0;
-        const dateB = new Date(b.date).getTime() || 0;
-        if (dateB !== dateA) {
-          return dateB - dateA;
-        }
-        const isPlaceholderA = (a as any).isPlaceholder ? 1 : 0;
-        const isPlaceholderB = (b as any).isPlaceholder ? 1 : 0;
-        if (isPlaceholderB !== isPlaceholderA) {
-          return isPlaceholderB - isPlaceholderA;
-        }
-        return b.prescriptionId.localeCompare(a.prescriptionId);
-      });
-
-      setAllPrescriptions(mergedList);
-    } catch (e) {
-      console.error("Error setting prescriptions state:", e);
-    }
-    setLoading(false);
   };
 
   useEffect(() => {

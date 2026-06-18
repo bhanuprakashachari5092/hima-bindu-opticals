@@ -168,72 +168,48 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
         isPlaceholder: false
       });
 
-      try {
-        const resPatients = await fetch(`${APPS_SCRIPT_URL}?action=getPatients`);
-        if (resPatients.ok) {
-          const jsonPatients = await resPatients.json();
-          if (Array.isArray(jsonPatients)) {
-            patients = jsonPatients.map(mapPatient);
-            localStorage.setItem('hb_demo_patients', JSON.stringify(patients));
-            loadedFromSheets = true;
-          } else if (jsonPatients.success && Array.isArray(jsonPatients.data)) {
-            patients = jsonPatients.data.map(mapPatient);
-            localStorage.setItem('hb_demo_patients', JSON.stringify(patients));
-            loadedFromSheets = true;
+      // Only show loader if we have absolutely no local data
+      if (!foundLocalData) {
+        setLoading(true);
+      }
+
+      // Background Sync to pull fresh data silently (only 1 network call)
+      fetch(`${APPS_SCRIPT_URL}?action=syncAll`)
+        .then(res => res.json())
+        .then(json => {
+          let rawData = Array.isArray(json) ? json : (json.success && Array.isArray(json.data) ? json.data : []);
+          if (rawData.length > 0) {
+            const freshPatients = rawData.map(mapPatient);
+            const freshRx = rawData.map(mapPrescription);
+            
+            localStorage.setItem('hb_demo_patients', JSON.stringify(freshPatients));
+            localStorage.setItem('hb_demo_prescriptions', JSON.stringify(freshRx));
+            
+            // Silently update state
+            setPatientsList(freshPatients.sort((a: any, b: any) => b.patientId.localeCompare(a.patientId)));
+            
+            const sortedRx = [...freshRx].sort((a: any, b: any) => b.prescriptionId.localeCompare(a.prescriptionId));
+            setRecentPrescriptions(sortedRx.slice(0, 5));
+            setAllPrescriptions(sortedRx);
+            
+            // Silently update metrics
+            const todayCount = freshPatients.filter((p: any) => p.date === todayString).length;
+            const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+            const monthlyCount = freshPatients.filter((p: any) => new Date(p.date) >= firstOfMonth).length;
+            
+            setMetrics({
+              todayCount: todayCount || freshPatients.length,
+              totalCount: freshPatients.length,
+              monthlyCount: monthlyCount || freshPatients.length
+            });
+            setLoading(false);
           }
-        }
-      } catch (err) {
-        console.warn("Failed to fetch patients from Google Sheets. Using localStorage fallback.", err);
-      }
-
-      try {
-        const resRx = await fetch(`${APPS_SCRIPT_URL}?action=getPrescriptions`);
-        if (resRx.ok) {
-          const jsonRx = await resRx.json();
-          if (Array.isArray(jsonRx)) {
-            rxList = jsonRx.map(mapPrescription);
-            localStorage.setItem('hb_demo_prescriptions', JSON.stringify(rxList));
-            loadedFromSheets = true;
-          } else if (jsonRx.success && Array.isArray(jsonRx.data)) {
-            rxList = jsonRx.data.map(mapPrescription);
-            localStorage.setItem('hb_demo_prescriptions', JSON.stringify(rxList));
-            loadedFromSheets = true;
-          }
-        }
-      } catch (err) {
-        console.warn("Failed to fetch prescriptions from Google Sheets. Using localStorage fallback.", err);
-      }
-
-      if (!loadedFromSheets) {
-        const demoPatientsStr = localStorage.getItem('hb_demo_patients') || '[]';
-        const demoRxStr = localStorage.getItem('hb_demo_prescriptions') || '[]';
-        try {
-          patients = JSON.parse(demoPatientsStr);
-          rxList = JSON.parse(demoRxStr) as Prescription[];
-        } catch (e) {
-          console.error("Local data parsing error", e);
-        }
-      }
-
-      try {
-        setPatientsList(patients.sort((a: any, b: any) => b.patientId.localeCompare(a.patientId)));
-
-        const todayPatients = patients.filter((p: any) => p.date === todayString).length;
-        const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-        const monthlyPatients = patients.filter((p: any) => new Date(p.date) >= firstOfMonth).length;
-
-        setMetrics({
-          todayCount: todayPatients || patients.length,
-          totalCount: patients.length,
-          monthlyCount: monthlyPatients || patients.length
+        })
+        .catch(err => {
+          console.warn("Background sync failed:", err);
+          setLoading(false);
         });
 
-        const sortedRx = [...rxList].sort((a, b) => b.prescriptionId.localeCompare(a.prescriptionId));
-        setRecentPrescriptions(sortedRx.slice(0, 5));
-        setAllPrescriptions(sortedRx);
-      } catch (e) {
-        console.error("Error setting dashboard data states:", e);
-      }
       setLoading(false);
     }
 
