@@ -575,7 +575,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
 
     const msg = [
       `🏥 *Himabindhu Eye Testing & Opticals*`,
-      `📍 Dharmavaram, Andhra Pradesh | 📞 9949334443`,
+      `📍 Dharmavaram, Andhra Pradesh | 📞 9010408092`,
       ``,
       `━━━━━━━━━━━━━━━━━━━━━━`,
       `📋 *PRESCRIPTION DETAILS*`,

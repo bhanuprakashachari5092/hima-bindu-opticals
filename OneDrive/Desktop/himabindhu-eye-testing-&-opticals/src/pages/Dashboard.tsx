@@ -636,7 +636,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     const fmt = (v: string | undefined) => (v && v !== '—' && v !== '') ? v : '—';
     const msg = [
       `🏥 *Himabindhu Eye Testing & Opticals*`,
-      `📍 Dharmavaram, Andhra Pradesh | 📞 9949334443`,
+      `📍 Dharmavaram, Andhra Pradesh | 📞 9010408092`,
       ``,
       `✨✨✨✨✨✨✨✨`,
       `👓 *ORDER & SPECTACLE PRESCRIPTION*`,
@@ -721,7 +721,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
     
     const msg = [
       `🏥 *Himabindhu Eye Testing & Opticals*`,
-      `📍 Dharmavaram, Andhra Pradesh | 📞 9949334443`,
+      `📍 Dharmavaram, Andhra Pradesh | 📞 9010408092`,
       ``,
       `🥳🥳🥳🥳🥳🥳🥳🥳`,
       `🎉 *SPECTACLES READY FOR COLLECTION*`,
@@ -736,7 +736,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
       `🟢 *Status:* READY TO COLLECT`,
       ``,
       `📍 *Collection Point:* Himabindhu Opticals, Dharmavaram`,
-      `📞 *Helpline:* 9949334443`,
+      `📞 *Helpline:* 9010408092`,
       ``,
       `🥳🥳🥳🥳🥳🥳🥳🥳`,
       `_Please visit our clinic during working hours to collect your new spectacles. Thank you! 🙏_`
@@ -1434,7 +1434,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                     const targetPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
                     const msg = [
                       `🏥 *Himabindhu Eye Testing & Opticals*`,
-                      `📍 Dharmavaram, Andhra Pradesh | 📞 9949334443`,
+                      `📍 Dharmavaram, Andhra Pradesh | 📞 9010408092`,
                       ``,
                       `🌟🌟🌟🌟🌟🌟🌟🌟`,
                       `🎉 *APPOINTMENT BOOKED*`,
