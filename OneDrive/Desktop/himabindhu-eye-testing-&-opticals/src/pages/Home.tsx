@@ -797,7 +797,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
                     <div className="space-y-3">
                       <h5 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Official Diagnostic Prescription</h5>
                       <div className="bg-slate-50 border border-slate-200 rounded-3xl p-1 md:p-3 shadow-inner overflow-hidden">
-                        <PrescriptionPDFViewerPanel prescription={selectedRx} />
+                        <PrescriptionPDFViewerPanel prescription={selectedRx} hideWhatsApp={true} />
                       </div>
                     </div>
                   </div>

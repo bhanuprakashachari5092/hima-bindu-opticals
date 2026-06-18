@@ -228,6 +228,7 @@ export interface Prescription {
 
 interface PrescriptionPDFProps {
   prescription: Prescription;
+  hideWhatsApp?: boolean;
 }
 
 // React-PDF Document Definition
@@ -493,7 +494,7 @@ export function printPrescriptionHTML(rx: Prescription) {
 }
 
 
-export function PrescriptionPDFViewerPanel({ prescription }: PrescriptionPDFProps) {
+export function PrescriptionPDFViewerPanel({ prescription, hideWhatsApp }: PrescriptionPDFProps) {
   const [showIframe, setShowIframe] = React.useState(false);
 
   // Map representation of advisory options for custom dynamic on-screen UI preview rendering
@@ -597,13 +598,15 @@ export function PrescriptionPDFViewerPanel({ prescription }: PrescriptionPDFProp
             )}
           </PDFDownloadLink>
 
-          <button
-            onClick={handleSendWhatsApp}
-            className="px-3.5 py-1.5 text-xs bg-[#25D366] text-white hover:bg-[#20b858] font-extrabold rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-sm shadow-[#25D366]/20"
-          >
-            <MessageCircle className="w-3.5 h-3.5 text-white" />
-            Send WhatsApp
-          </button>
+          {!hideWhatsApp && (
+            <button
+              onClick={handleSendWhatsApp}
+              className="px-3.5 py-1.5 text-xs bg-[#25D366] text-white hover:bg-[#20b858] font-extrabold rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-sm shadow-[#25D366]/20"
+            >
+              <MessageCircle className="w-3.5 h-3.5 text-white" />
+              Send WhatsApp
+            </button>
+          )}
         </div>
       </div>
 
