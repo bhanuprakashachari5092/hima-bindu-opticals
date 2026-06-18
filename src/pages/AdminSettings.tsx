@@ -25,7 +25,8 @@ import {
   MapPin,
   Smartphone,
   Activity,
-  Download
+  Download,
+  Edit
 } from 'lucide-react';
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwin877dfuTnQuvzaSifRtDBtkqbsUG7ULF2RxwJH9-t65AUOC9QAs_quXTgPdmncJW/exec";
@@ -53,7 +54,7 @@ interface Patient {
 }
 
 export default function AdminSettings() {
-  const { isDemoMode, userProfile } = useAuth();
+  const { isDemoMode, userProfile, updateActiveProfile } = useAuth();
   
   // Form State
   const [name, setName] = useState('');
@@ -73,8 +74,10 @@ export default function AdminSettings() {
   const [loadingLogs, setLoadingLogs] = useState(true);
 
   // Clinic schedule & status state
-  const [morningHours, setMorningHours] = useState('9:00 a.m. to 2:00 p.m.');
-  const [eveningHours, setEveningHours] = useState('4:00 p.m. to 9:00 p.m.');
+  const [morningStart, setMorningStart] = useState('09:00');
+  const [morningEnd, setMorningEnd] = useState('14:00');
+  const [eveningStart, setEveningStart] = useState('16:00');
+  const [eveningEnd, setEveningEnd] = useState('21:00');
   const [clinicStatus, setClinicStatus] = useState<'open' | 'half-day' | 'closed'>('open');
   const [customNotice, setCustomNotice] = useState('');
   const [scheduleSuccessMsg, setScheduleSuccessMsg] = useState<string | null>(null);
@@ -251,8 +254,10 @@ export default function AdminSettings() {
     if (savedSchedule) {
       try {
         const parsed = JSON.parse(savedSchedule);
-        if (parsed.morningHours) setMorningHours(parsed.morningHours);
-        if (parsed.eveningHours) setEveningHours(parsed.eveningHours);
+        if (parsed.morningStart) setMorningStart(parsed.morningStart);
+        if (parsed.morningEnd) setMorningEnd(parsed.morningEnd);
+        if (parsed.eveningStart) setEveningStart(parsed.eveningStart);
+        if (parsed.eveningEnd) setEveningEnd(parsed.eveningEnd);
         if (parsed.status) setClinicStatus(parsed.status);
         if (parsed.customNotice !== undefined) setCustomNotice(parsed.customNotice);
       } catch (e) {
@@ -261,11 +266,28 @@ export default function AdminSettings() {
     }
   }, [isDemoMode]);
 
+  const formatTimeRange = (start: string, end: string) => {
+    const formatSingle = (timeStr: string) => {
+      if (!timeStr) return "";
+      let [h, m] = timeStr.split(':');
+      let hr = parseInt(h);
+      let ampm = hr >= 12 ? 'p.m.' : 'a.m.';
+      if (hr > 12) hr -= 12;
+      if (hr === 0) hr = 12;
+      return `${hr}:${m} ${ampm}`;
+    };
+    return `${formatSingle(start)} to ${formatSingle(end)}`;
+  };
+
   const handleSaveSchedule = (e: React.FormEvent) => {
     e.preventDefault();
     const schedule = {
-      morningHours: morningHours.trim(),
-      eveningHours: eveningHours.trim(),
+      morningStart,
+      morningEnd,
+      eveningStart,
+      eveningEnd,
+      morningHours: formatTimeRange(morningStart, morningEnd),
+      eveningHours: formatTimeRange(eveningStart, eveningEnd),
       status: clinicStatus,
       customNotice: customNotice.trim()
     };
@@ -355,6 +377,51 @@ export default function AdminSettings() {
     }
   };
 
+  // Rename Staff Account
+  const handleRenameStaff = async (staff: StaffUser) => {
+    const newName = window.prompt(`Enter new name for ${staff.name} (${staff.email}):`, staff.name);
+    if (!newName || newName.trim() === '' || newName.trim() === staff.name) {
+      return; // cancelled or unchanged
+    }
+
+    if (isDemoMode) {
+      const updated = staffList.map(s => 
+        s.email === staff.email ? { ...s, name: newName.trim() } : s
+      );
+      localStorage.setItem('hb_demo_users', JSON.stringify(updated));
+      if (staff.email === userProfile?.email) {
+        updateActiveProfile({ name: newName.trim() });
+      }
+      await loadStaffRegistry();
+      alert(`Staff name updated to ${newName.trim()}.`);
+      return;
+    }
+
+    try {
+      const idsToUpdate = staff.docIds || (staff.uid ? [staff.uid] : []);
+      if (idsToUpdate.length === 0) {
+        const targetId = `temp_${staff.email.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')}`;
+        idsToUpdate.push(targetId);
+      }
+
+      for (const docId of idsToUpdate) {
+        await setDoc(doc(db, 'users', docId), { name: newName.trim() }, { merge: true }).catch(err => {
+          handleFirestoreError(err, OperationType.UPDATE, `users/${docId}`);
+        });
+      }
+      
+      if (staff.email === userProfile?.email) {
+        updateActiveProfile({ name: newName.trim() });
+      }
+
+      alert(`Staff name updated to ${newName.trim()}.`);
+      await loadStaffRegistry();
+    } catch (err) {
+      console.error(err);
+      alert("Rename failed. Check your network or permissions.");
+    }
+  };
+
   // Revoke/Delete Staff accounts
   const handleRevokeStaff = async (staff: StaffUser) => {
     if (staff.email === userProfile?.email) {
@@ -418,12 +485,16 @@ export default function AdminSettings() {
     }
   };
 
-  // Filter patients list based on admin query
-  const filteredPatients = patientsList.filter(p => 
-    p.name.toLowerCase().includes(patientSearch.toLowerCase()) ||
-    p.patientId.toLowerCase().includes(patientSearch.toLowerCase()) ||
-    p.mobile.includes(patientSearch)
-  );
+  const filteredPatients = patientsList.filter(p => {
+    const searchLower = (patientSearch || '').toLowerCase();
+    const pName = (p.name || '').toLowerCase();
+    const pId = (p.patientId || '').toLowerCase();
+    const pMobile = String(p.mobile || '');
+    
+    return pName.includes(searchLower) || 
+           pId.includes(searchLower) || 
+           pMobile.includes(patientSearch);
+  });
 
   // Filter only receptionist logs
   const receptionistLogs = loginLogs.filter(log => log.role?.toLowerCase() === 'receptionist');
@@ -601,7 +672,14 @@ export default function AdminSettings() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-end shrink-0 pl-2">
+                    <div className="flex items-center gap-1 shrink-0 pl-2">
+                      <button
+                        onClick={() => handleRenameStaff(staff)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition opacity-60 hover:opacity-100 cursor-pointer"
+                        title="Rename staff member"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => handleRevokeStaff(staff)}
                         className="p-1.5 text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition opacity-60 hover:opacity-100 cursor-pointer"
@@ -619,124 +697,152 @@ export default function AdminSettings() {
       </div>
 
       {/* CLINIC CONSULTING SCHEDULE & STATUS CUSTOMIZER */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="clinic-schedule-customizer">
-        <div className="p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <Clock className="w-5 h-5 text-amber-500" />
-            <h3 className="font-extrabold text-white text-sm uppercase tracking-wider">Clinic consulting schedule & status</h3>
+      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden relative" id="clinic-schedule-customizer">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
+        <div className="p-6 md:p-8 bg-gradient-to-br from-slate-900 to-slate-950 text-white flex items-center justify-between border-b border-slate-800 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none"></div>
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-[inset_0_1px_3px_rgba(255,255,255,0.6)] shadow-amber-500/30">
+              <Clock className="w-6 h-6 text-amber-950" />
+            </div>
+            <div>
+              <h3 className="font-black text-slate-100 text-base md:text-lg uppercase tracking-wider">Clinic Consulting Schedule & Status</h3>
+              <p className="text-[11px] text-amber-400/80 font-bold uppercase tracking-widest mt-1">Live Configuration Desk</p>
+            </div>
           </div>
-          <span className="text-[9px] uppercase font-mono bg-slate-950 px-2 py-0.5 rounded text-slate-400">
-            Live Schedule Desk
-          </span>
         </div>
 
         {scheduleSuccessMsg && (
-          <div className="mx-6 mt-6 p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-xl flex items-center gap-2.5">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-            <div className="text-xs text-emerald-800 font-bold">
+          <div className="mx-6 md:mx-8 mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 shadow-inner">
+            <div className="p-2 bg-emerald-500 rounded-xl text-white shadow-sm">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+            <div className="text-xs text-emerald-800 font-extrabold tracking-wide uppercase">
               {scheduleSuccessMsg}
             </div>
           </div>
         )}
 
-        <form onSubmit={handleSaveSchedule} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleSaveSchedule} className="p-6 md:p-8 space-y-8 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             {/* Morning hours */}
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+            <div className="group">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 group-focus-within:text-amber-600 transition-colors">
                 Morning Session Hours
               </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                  <Clock className="w-4 h-4" />
-                </span>
-                <input
-                  type="text"
-                  placeholder="e.g., 9:00 a.m. to 2:00 p.m."
-                  value={morningHours}
-                  onChange={(e) => setMorningHours(e.target.value)}
-                  required
-                  className="w-full border border-slate-200 bg-slate-50/50 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition"
-                />
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <input
+                    type="time"
+                    value={morningStart}
+                    onChange={(e) => setMorningStart(e.target.value)}
+                    required
+                    className="w-full border-2 border-slate-100 bg-slate-50/50 focus:bg-white rounded-2xl px-4 py-3.5 text-sm text-slate-800 font-extrabold focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 focus:outline-hidden transition-all shadow-sm hover:border-slate-200"
+                  />
+                </div>
+                <span className="text-slate-400 font-extrabold text-xs uppercase">To</span>
+                <div className="relative flex-1">
+                  <input
+                    type="time"
+                    value={morningEnd}
+                    onChange={(e) => setMorningEnd(e.target.value)}
+                    required
+                    className="w-full border-2 border-slate-100 bg-slate-50/50 focus:bg-white rounded-2xl px-4 py-3.5 text-sm text-slate-800 font-extrabold focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 focus:outline-hidden transition-all shadow-sm hover:border-slate-200"
+                  />
+                </div>
               </div>
             </div>
 
             {/* Evening hours */}
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+            <div className="group">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 group-focus-within:text-amber-600 transition-colors">
                 Evening Session Hours
               </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                  <Clock className="w-4 h-4" />
-                </span>
-                <input
-                  type="text"
-                  placeholder="e.g., 4:00 p.m. to 9:00 p.m."
-                  value={eveningHours}
-                  onChange={(e) => setEveningHours(e.target.value)}
-                  required
-                  className="w-full border border-slate-200 bg-slate-50/50 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition"
-                />
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <input
+                    type="time"
+                    value={eveningStart}
+                    onChange={(e) => setEveningStart(e.target.value)}
+                    required
+                    className="w-full border-2 border-slate-100 bg-slate-50/50 focus:bg-white rounded-2xl px-4 py-3.5 text-sm text-slate-800 font-extrabold focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 focus:outline-hidden transition-all shadow-sm hover:border-slate-200"
+                  />
+                </div>
+                <span className="text-slate-400 font-extrabold text-xs uppercase">To</span>
+                <div className="relative flex-1">
+                  <input
+                    type="time"
+                    value={eveningEnd}
+                    onChange={(e) => setEveningEnd(e.target.value)}
+                    required
+                    className="w-full border-2 border-slate-100 bg-slate-50/50 focus:bg-white rounded-2xl px-4 py-3.5 text-sm text-slate-800 font-extrabold focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 focus:outline-hidden transition-all shadow-sm hover:border-slate-200"
+                  />
+                </div>
               </div>
             </div>
 
             {/* Status options */}
             <div className="md:col-span-2">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
                 Today's Clinic Status (Display on Homepage)
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 
                 {/* OPEN STATUS */}
                 <button
                   type="button"
                   onClick={() => setClinicStatus('open')}
-                  className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                  className={`relative flex flex-col items-center justify-center gap-3 p-5 rounded-2xl border-2 transition-all cursor-pointer overflow-hidden ${
                     clinicStatus === 'open' 
-                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-xs' 
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      ? 'bg-emerald-50/50 border-emerald-500 text-emerald-800 shadow-[0_4px_20px_rgba(16,185,129,0.15)] scale-[1.02]' 
+                      : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
-                  <span className={`w-2.5 h-2.5 rounded-full ${clinicStatus === 'open' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
-                  <span>Fully Open (Active)</span>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${clinicStatus === 'open' ? 'bg-emerald-100' : 'bg-slate-100'}`}>
+                    <span className={`w-3.5 h-3.5 rounded-full ${clinicStatus === 'open' ? 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.6)]' : 'bg-slate-300'}`}></span>
+                  </div>
+                  <span className="font-extrabold text-xs uppercase tracking-wider">Fully Open (Active)</span>
                 </button>
 
                 {/* HALF DAY STATUS */}
                 <button
                   type="button"
                   onClick={() => setClinicStatus('half-day')}
-                  className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                  className={`relative flex flex-col items-center justify-center gap-3 p-5 rounded-2xl border-2 transition-all cursor-pointer overflow-hidden ${
                     clinicStatus === 'half-day' 
-                      ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-xs' 
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      ? 'bg-amber-50/50 border-amber-500 text-amber-800 shadow-[0_4px_20px_rgba(245,158,11,0.15)] scale-[1.02]' 
+                      : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
-                  <span className={`w-2.5 h-2.5 rounded-full ${clinicStatus === 'half-day' ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`}></span>
-                  <span>Half Working Day</span>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${clinicStatus === 'half-day' ? 'bg-amber-100' : 'bg-slate-100'}`}>
+                    <span className={`w-3.5 h-3.5 rounded-full ${clinicStatus === 'half-day' ? 'bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.6)]' : 'bg-slate-300'}`}></span>
+                  </div>
+                  <span className="font-extrabold text-xs uppercase tracking-wider">Half Working Day</span>
                 </button>
 
                 {/* CLOSED / HOLIDAY STATUS */}
                 <button
                   type="button"
                   onClick={() => setClinicStatus('closed')}
-                  className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                  className={`relative flex flex-col items-center justify-center gap-3 p-5 rounded-2xl border-2 transition-all cursor-pointer overflow-hidden ${
                     clinicStatus === 'closed' 
-                      ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-xs' 
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      ? 'bg-rose-50/50 border-rose-500 text-rose-800 shadow-[0_4px_20px_rgba(225,29,72,0.15)] scale-[1.02]' 
+                      : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
-                  <span className={`w-2.5 h-2.5 rounded-full ${clinicStatus === 'closed' ? 'bg-rose-500 animate-pulse' : 'bg-slate-400'}`}></span>
-                  <span>Holiday / Closed</span>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${clinicStatus === 'closed' ? 'bg-rose-100' : 'bg-slate-100'}`}>
+                    <span className={`w-3.5 h-3.5 rounded-full ${clinicStatus === 'closed' ? 'bg-rose-500 animate-pulse shadow-[0_0_10px_rgba(225,29,72,0.6)]' : 'bg-slate-300'}`}></span>
+                  </div>
+                  <span className="font-extrabold text-xs uppercase tracking-wider">Holiday / Closed</span>
                 </button>
 
               </div>
             </div>
 
             {/* Custom Notice message */}
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+            <div className="md:col-span-2 group">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 group-focus-within:text-amber-600 transition-colors">
                 Custom Status Notice / Announcement (Optional)
               </label>
               <textarea
@@ -744,18 +850,18 @@ export default function AdminSettings() {
                 placeholder="e.g., Clinic closed due to festival holiday. Emergency services call 9010408092."
                 value={customNotice}
                 onChange={(e) => setCustomNotice(e.target.value)}
-                className="w-full border border-slate-200 bg-slate-50/50 focus:bg-white rounded-xl px-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition resize-y"
+                className="w-full border-2 border-slate-100 bg-slate-50/50 focus:bg-white rounded-2xl p-4 text-sm text-slate-800 font-extrabold focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 focus:outline-hidden transition-all shadow-sm hover:border-slate-200 resize-y leading-relaxed"
               />
             </div>
 
           </div>
 
-          <div className="pt-4 border-t border-slate-100 flex justify-end">
+          <div className="pt-8 mt-2 border-t-2 border-slate-100 flex justify-end">
             <button
               type="submit"
-              className="px-5 py-2.5 bg-slate-900 text-white hover:bg-slate-800 rounded-xl font-bold transition cursor-pointer flex items-center gap-1.5"
+              className="group px-8 py-3.5 bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white rounded-2xl font-black uppercase tracking-wider text-xs transition-all shadow-[0_4px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:-translate-y-1 cursor-pointer flex items-center gap-3"
             >
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <CheckCircle2 className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
               <span>Update Clinic Status & Hours</span>
             </button>
           </div>

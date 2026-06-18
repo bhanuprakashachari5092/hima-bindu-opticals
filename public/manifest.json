@@ -4,12 +4,12 @@
   "description": "Clinic console for eye testing and opticals management.",
   "icons": [
     {
-      "src": "/realistic_eye_logo.png",
+      "src": "/hima-logo.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "/realistic_eye_logo.png",
+      "src": "/hima-logo.png",
       "type": "image/png",
       "sizes": "512x512"
     }

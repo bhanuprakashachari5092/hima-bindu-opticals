@@ -447,8 +447,8 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       {/* Top Header Navigation */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3 md:px-8 md:py-5 flex items-center justify-between transition-all duration-300">
         <div className="flex items-center gap-4.5">
-          <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-md shadow-slate-900/15 transform hover:scale-105 transition-transform flex items-center justify-center bg-white border border-slate-200 p-0.5">
-            <img src="/realistic_eye_logo.png" alt="Himabindhu Eye Testing Logo" className="w-full h-full object-cover rounded-xl pointer-events-none select-none" />
+          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg shadow-slate-900/15 transform hover:scale-105 transition-transform flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 p-1.5">
+            <img src="/hima-logo.png" alt="Himabindhu Eye Testing Logo" className="w-full h-full object-contain scale-[1.3] pointer-events-none select-none drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
           </div>
           <div className="space-y-1">
             <h1 

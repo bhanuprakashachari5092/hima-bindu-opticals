@@ -20,7 +20,10 @@ import {
   MessageCircle,
   Save,
   Clock,
-  Edit
+  Edit,
+  CheckCircle2,
+  CheckCircle,
+  X
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -61,6 +64,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
   const [allPrescriptions, setAllPrescriptions] = useState<Prescription[]>([]);
   const [receptionSearch, setReceptionSearch] = useState('');
   const [selectedRx, setSelectedRx] = useState<Prescription | null>(null);
+  const [inspectReadyRx, setInspectReadyRx] = useState<Prescription | null>(null);
   const [frameName, setFrameName] = useState('');
   const [lensType, setLensType] = useState('');
   const [orderPrice, setOrderPrice] = useState('');
@@ -942,11 +946,17 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
   );
 
   if (userProfile?.role === 'receptionist') {
-    const filteredRx = allPrescriptions.filter(rx => 
-      rx.patientName.toLowerCase().includes(receptionSearch.toLowerCase()) ||
-      rx.prescriptionId.toLowerCase().includes(receptionSearch.toLowerCase()) ||
-      rx.mobile.includes(receptionSearch)
-    );
+    const filteredRx = allPrescriptions.filter(rx => {
+      if (rx.isPlaceholder) return false;
+      const searchLower = (receptionSearch || '').toLowerCase();
+      const pName = (rx.patientName || '').toLowerCase();
+      const pId = (rx.prescriptionId || '').toLowerCase();
+      const pMobile = String(rx.mobile || '');
+      
+      return pName.includes(searchLower) || 
+             pId.includes(searchLower) || 
+             pMobile.includes(receptionSearch);
+    });
 
     return (
       <div className="space-y-6 font-sans pt-6 pb-10 animate-fade-in" id="receptionist-dashboard-root">
@@ -964,59 +974,74 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left Panel: Prescription/Patient Queue & Patient Registration */}
-          <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-            {/* Header Tabs */}
-            <div className="bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 px-5 py-4">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setReceptionTab('orders')}
-                  className={`px-4 py-2 text-xs font-extrabold uppercase tracking-wider rounded-xl transition ${
-                    receptionTab === 'orders' 
-                      ? 'bg-teal-600 text-white shadow-xs' 
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                  }`}
-                >
-                  Spectacle Queue
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setEditingPatientId(null);
-                    setRegName('');
-                    setRegMobile('');
-                    setRegAge('');
-                    setRegGender('Male');
-                    setReceptionTab('register');
-                    const nextId = await generateNextPatientId(isDemoMode);
-                    setNextPatientId(nextId);
-                  }}
-                  className={`px-4 py-2 text-xs font-extrabold uppercase tracking-wider rounded-xl transition ${
-                    receptionTab === 'register' 
-                      ? 'bg-teal-600 text-white shadow-xs' 
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                  }`}
-                >
-                  {editingPatientId ? 'Edit Patient' : 'Register New Patient'}
-                </button>
-              </div>
-
-              {receptionTab === 'orders' && (
-                <div className="relative shrink-0 max-w-xs w-full">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                    <Search className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Search Patient Name, ID or Mobile..."
-                    value={receptionSearch}
-                    onChange={(e) => setReceptionSearch(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 focus:bg-white text-slate-300 focus:text-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs font-bold focus:outline-hidden transition"
-                  />
+        <div className="w-full">
+          {/* Main Panel: Prescription/Patient Queue & Patient Registration */}
+          <div className="w-full bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+            {/* Ultra Luxury Header Tabs */}
+            <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-5 border-b border-slate-800/80 relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none"></div>
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative z-10">
+                
+                {/* Segmented Control / Luxury Buttons */}
+                <div className="flex items-center p-1.5 bg-slate-800/60 backdrop-blur-md rounded-2xl border border-slate-700/50 shadow-inner w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => setReceptionTab('orders')}
+                    className={`relative px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all duration-500 ease-out overflow-hidden flex items-center justify-center gap-2 flex-1 sm:flex-none ${
+                      receptionTab === 'orders' 
+                        ? 'text-white shadow-[0_0_20px_rgba(20,184,166,0.25)]' 
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/30'
+                    }`}
+                  >
+                    {receptionTab === 'orders' && (
+                      <span className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-400 opacity-90 rounded-xl"></span>
+                    )}
+                    <Glasses className={`w-4 h-4 relative z-10 ${receptionTab === 'orders' ? 'text-white animate-pulse' : ''}`} />
+                    <span className="relative z-10">Spectacle Queue</span>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setEditingPatientId(null);
+                      setRegName('');
+                      setRegMobile('');
+                      setRegAge('');
+                      setRegGender('Male');
+                      setReceptionTab('register');
+                      const nextId = await generateNextPatientId(isDemoMode);
+                      setNextPatientId(nextId);
+                    }}
+                    className={`relative px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all duration-500 ease-out overflow-hidden flex items-center justify-center gap-2 flex-1 sm:flex-none ${
+                      receptionTab === 'register' 
+                        ? 'text-white shadow-[0_0_20px_rgba(234,179,8,0.25)]' 
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/30'
+                    }`}
+                  >
+                    {receptionTab === 'register' && (
+                      <span className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-400 opacity-90 rounded-xl"></span>
+                    )}
+                    <User className={`w-4 h-4 relative z-10 ${receptionTab === 'register' ? 'text-white animate-bounce' : ''}`} />
+                    <span className="relative z-10">{editingPatientId ? 'Edit Patient' : 'Register New'}</span>
+                  </button>
                 </div>
-              )}
+
+                {receptionTab === 'orders' && (
+                  <div className="relative shrink-0 w-full sm:max-w-[240px]">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <Search className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Search Name or Mobile..."
+                      value={receptionSearch}
+                      onChange={(e) => setReceptionSearch(e.target.value)}
+                      className="w-full bg-slate-800/80 backdrop-blur-md border border-slate-700/80 focus:bg-white text-slate-200 focus:text-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold focus:outline-hidden transition shadow-inner"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto max-h-[550px] divide-y divide-slate-100 min-h-[300px]">
@@ -1086,11 +1111,18 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
               )}
             </div>
           </div>
+        </div>
 
-          {/* Right Panel: Order Setup & Actions */}
-          <div className="lg:col-span-5 space-y-6" id="order-customizer-panel">
-            {selectedRx ? (
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-6">
+        {/* Spectacle Customizer Desk Modal */}
+        {selectedRx && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto">
+            <div className="bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 max-w-2xl w-full my-auto space-y-6 relative max-h-[90vh] overflow-y-auto">
+              <button
+                onClick={() => setSelectedRx(null)}
+                className="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
                 <div>
                   <span className="text-[9px] font-black text-teal-600 uppercase tracking-widest font-mono block">
                     Spectacle Customizer Desk
@@ -1464,18 +1496,9 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                     </div>
                   </div>
                 )}
-              </div>
-            ) : (
-              <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center text-gray-400 shadow-2xs space-y-3.5 h-full flex flex-col items-center justify-center min-h-[350px]">
-                <Glasses className="w-14 h-14 text-gray-300 mx-auto animate-bounce" />
-                <h4 className="font-extrabold text-gray-700 text-sm">Clinical Registry Standby</h4>
-                <p className="text-xs max-w-sm mx-auto leading-normal">
-                  Choose a registered spectacle prescription document from the search archive on the left to verify refraction metrics and launch printable letterheads.
-                </p>
-              </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
         {registeredPatientForWhatsApp && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
             <div className="bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 max-w-md w-full space-y-6 text-center">
@@ -1546,6 +1569,112 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                   Go to Spectacle Queue
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Ready Order Text Details Modal */}
+        {inspectReadyRx && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
+            <div className="bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 max-w-md w-full space-y-6">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Ready For Delivery</h3>
+                    <p className="text-[10px] text-slate-500 font-mono">Order: {inspectReadyRx.prescriptionId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setInspectReadyRx(null)}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-slate-50 rounded-2xl p-4 space-y-3 border border-slate-100">
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Patient Name</span>
+                    <span className="font-extrabold text-slate-900 text-sm">{inspectReadyRx.patientName}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Contact Mobile</span>
+                      <span className="font-bold text-slate-700 font-mono text-xs">{inspectReadyRx.mobile}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Patient ID</span>
+                      <span className="font-bold text-slate-700 font-mono text-xs">{inspectReadyRx.patientId}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-indigo-50/40 rounded-2xl p-3 border border-indigo-100 space-y-2">
+                  <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider block pl-1">Ocular Refraction</span>
+                  <table className="w-full text-center text-[10px]">
+                    <thead>
+                      <tr className="text-slate-400 border-b border-indigo-100/60">
+                        <th className="font-semibold pb-1.5 text-left pl-2">Eye</th>
+                        <th className="font-semibold pb-1.5">SPH</th>
+                        <th className="font-semibold pb-1.5">CYL</th>
+                        <th className="font-semibold pb-1.5">AXIS</th>
+                        <th className="font-semibold pb-1.5">ADD</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-slate-700 font-bold">
+                      <tr className="border-b border-indigo-50">
+                        <td className="py-2 text-slate-500 font-black text-left pl-2">R.E.</td>
+                        <td className="py-2">{inspectReadyRx.rightEyeData?.distance?.sph || '—'}</td>
+                        <td className="py-2">{inspectReadyRx.rightEyeData?.distance?.cyl || '—'}</td>
+                        <td className="py-2">{inspectReadyRx.rightEyeData?.distance?.axis || '—'}</td>
+                        <td className="py-2 text-indigo-600">{inspectReadyRx.rightEyeData?.add ? `+${inspectReadyRx.rightEyeData.add}` : '—'}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-slate-500 font-black text-left pl-2">L.E.</td>
+                        <td className="py-2">{inspectReadyRx.leftEyeData?.distance?.sph || '—'}</td>
+                        <td className="py-2">{inspectReadyRx.leftEyeData?.distance?.cyl || '—'}</td>
+                        <td className="py-2">{inspectReadyRx.leftEyeData?.distance?.axis || '—'}</td>
+                        <td className="py-2 text-indigo-600">{inspectReadyRx.leftEyeData?.add ? `+${inspectReadyRx.leftEyeData.add}` : '—'}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="bg-amber-50/30 rounded-2xl p-4 space-y-3 border border-amber-100">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="text-[9px] font-bold text-amber-600/70 uppercase tracking-wider block">Frame Type</span>
+                      <span className="font-bold text-slate-800 text-xs">{inspectReadyRx.frameName || 'Standard Frame'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold text-amber-600/70 uppercase tracking-wider block">Lens Type</span>
+                      <span className="font-bold text-slate-800 text-xs">{inspectReadyRx.lensType || 'Standard Lens'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-100 flex justify-between items-center">
+                  <div>
+                    <span className="text-[9px] font-bold text-emerald-600/70 uppercase tracking-wider block">Amount Paid</span>
+                    <span className="font-extrabold text-emerald-800 text-lg">₹ {inspectReadyRx.receivedCost || inspectReadyRx.actualCost}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[9px] font-bold text-emerald-600/70 uppercase tracking-wider block">Balance</span>
+                    <span className="font-extrabold text-emerald-600 text-xs">Nil / Paid in Full</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setInspectReadyRx(null)}
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-md"
+              >
+                Close Details
+              </button>
             </div>
           </div>
         )}

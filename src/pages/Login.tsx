@@ -89,16 +89,8 @@ export default function Login() {
       )}
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="mx-auto h-16 w-16 rounded-2xl bg-slate-900 shadow-md shadow-slate-900/20 flex items-center justify-center text-white p-2.5">
-          <svg viewBox="0 0 100 100" className="w-full h-full">
-            <path d="M15,50 C30,22 70,22 85,50 C70,78 30,78 15,50 Z" fill="none" stroke="#ffffff" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="50" cy="50" r="16" fill="none" stroke="#ffffff" strokeWidth="7" />
-            <circle cx="50" cy="50" r="8" fill="#ffffff" />
-            <g fill="#ffffff">
-              <rect x="15" y="65" width="16" height="5" rx="1.5" />
-              <rect x="20.5" y="59.5" width="5" height="16" rx="1.5" />
-            </g>
-          </svg>
+        <div className="mx-auto h-20 w-20 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 shadow-xl shadow-slate-900/30 flex items-center justify-center border border-slate-800 p-2">
+          <img src="/hima-logo.png" alt="Himabindhu Eye Clinic Logo" className="w-full h-full object-contain scale-[1.3] drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" />
         </div>
         <h2 className="mt-6 text-center text-3xl font-black text-slate-900 font-serif tracking-tight">
           HIMABINDHU
@@ -208,12 +200,7 @@ export default function Login() {
 
         </div>
 
-        <div className="mt-6 text-center text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-          <p className="flex items-center justify-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-slate-500" />
-            Main Branch • Dharmavaram Branch • Securing HIPAA health protocols
-          </p>
-        </div>
+
       </div>
     </div>
   );

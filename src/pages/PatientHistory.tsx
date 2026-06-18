@@ -16,7 +16,8 @@ import {
   Trash2,
   X,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { 
   generateSphCylOptions, 
@@ -43,6 +44,7 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedRx, setSelectedRx] = useState<Prescription | null>(null);
+  const [inspectReadyRx, setInspectReadyRx] = useState<Prescription | null>(null);
 
   // Edit Mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -610,9 +612,9 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
                               handleInspect(rx);
                               handleEditInitialize(rx);
                             }}
-                            className="text-[10px] bg-teal-50 border border-teal-200 text-teal-600 px-2.0 py-1.0 rounded font-semibold hover:bg-teal-100 flex items-center gap-1 cursor-pointer"
+                            className="text-[10px] bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200 text-teal-700 px-3 py-1.5 rounded-lg font-bold hover:bg-gradient-to-br hover:from-teal-500 hover:to-emerald-600 hover:text-white hover:border-transparent hover:-translate-y-0.5 hover:shadow-md hover:shadow-teal-500/30 transition-all duration-300 ease-out flex items-center gap-1.5 cursor-pointer group"
                           >
-                            <Edit3 className="w-3 h-3" />
+                            <Edit3 className="w-3 h-3 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
                             Edit
                           </button>
                           <button
@@ -622,9 +624,9 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
                                 handleDeletePrescription(rx);
                               }
                             }}
-                            className="text-[10px] bg-red-50 border border-red-200 text-red-600 px-2.0 py-1.0 rounded font-semibold hover:bg-red-100 flex items-center gap-1 cursor-pointer"
+                            className="text-[10px] bg-gradient-to-br from-rose-50 to-red-50 border border-red-200 text-red-700 px-3 py-1.5 rounded-lg font-bold hover:bg-gradient-to-br hover:from-rose-500 hover:to-red-600 hover:text-white hover:border-transparent hover:-translate-y-0.5 hover:shadow-md hover:shadow-red-500/30 transition-all duration-300 ease-out flex items-center gap-1.5 cursor-pointer group"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-3 h-3 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />
                             Delete
                           </button>
                         </>
@@ -634,9 +636,9 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
                           e.stopPropagation();
                           handleInspect(rx);
                         }}
-                        className="text-[10px] bg-white border border-gray-300 px-2.0 py-1.0 rounded text-gray-700 font-semibold hover:bg-gray-100 flex items-center gap-1 cursor-pointer"
+                        className="text-[10px] bg-gradient-to-br from-slate-50 to-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg font-bold hover:bg-gradient-to-br hover:from-slate-800 hover:to-slate-900 hover:text-white hover:border-transparent hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-900/30 transition-all duration-300 ease-out flex items-center gap-1.5 cursor-pointer group"
                       >
-                        <Eye className="w-3 h-3 text-slate-800" />
+                        <Eye className="w-3 h-3 transition-transform duration-300 group-hover:scale-110" />
                         {isPlaceholder ? "Add Eyesight" : "Inspect Spec"}
                       </button>
                     </div>
@@ -647,12 +649,64 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
           )}
         </div>        {/* Right column: Standby view & instructions */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center text-gray-400 shadow-2xs space-y-3.5 h-full flex flex-col items-center justify-center min-h-[350px]">
-            <History className="w-14 h-14 text-gray-300 mx-auto animate-bounce" />
-            <h4 className="font-extrabold text-gray-700 text-sm">Clinical Registry Standby</h4>
-            <p className="text-xs max-w-sm mx-auto leading-normal">
-              Choose a registered spectacle prescription document from the search archive on the left to verify refraction metrics and launch printable letterheads.
-            </p>
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm h-full flex flex-col min-h-[350px]">
+            <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+              <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-800 text-sm uppercase tracking-wider">Ready for Delivery</h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">Fully paid orders waiting to be handed over</p>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+              {(() => {
+                const readyPaid = allPrescriptions.filter(rx => 
+                  rx.orderStatus === 'Ready' && 
+                  (parseFloat(rx.balanceCost || '0') <= 0 && parseFloat(rx.actualCost || '0') > 0)
+                );
+                
+                if (readyPaid.length === 0) {
+                  return (
+                    <div className="bg-white rounded-2xl p-8 text-center text-gray-400 space-y-3.5 flex flex-col items-center justify-center h-full">
+                      <History className="w-14 h-14 text-gray-300 mx-auto animate-bounce" />
+                      <h4 className="font-extrabold text-gray-700 text-sm">Clinical Registry Standby</h4>
+                      <p className="text-xs max-w-sm mx-auto leading-normal">
+                        Choose a registered spectacle prescription document from the search archive on the left to verify refraction metrics and launch printable letterheads.
+                      </p>
+                    </div>
+                  );
+                }
+                
+                return readyPaid.map(rx => (
+                  <div 
+                    key={rx.prescriptionId}
+                    onClick={() => setInspectReadyRx(rx)}
+                    className="p-4 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 hover:border-emerald-300 transition cursor-pointer flex justify-between items-center group shadow-xs"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-900">{rx.patientName}</span>
+                        <span className="text-[9px] font-bold text-slate-500 font-mono">({rx.patientId})</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        Mobile: <span className="font-mono">{rx.mobile}</span> • Order: <span className="font-mono">{rx.prescriptionId}</span>
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[9px] font-black uppercase tracking-wider rounded-md border border-emerald-200 shadow-sm">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Payment Completed
+                      </span>
+                      <span className="text-[9px] text-emerald-600 font-bold group-hover:underline">
+                        View Details →
+                      </span>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
           </div>
         </div>
 
@@ -678,8 +732,8 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
               </div>
               
               <div className="flex items-center gap-3">
-                {/* Actions allowed by Roles (Admin, Doctor, Receptionist can edit/delete parameters) */}
-                {userProfile?.role !== 'patient' && !isEditing && (
+                {/* Actions allowed by Roles (Admin, Doctor can edit/delete parameters) */}
+                {(userProfile?.role === 'admin' || userProfile?.role === 'doctor') && !isEditing && (
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditInitialize(selectedRx)}
@@ -1010,6 +1064,112 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
               className="w-full px-5 py-2.5 bg-slate-900 hover:bg-slate-955 text-white rounded-xl text-xs font-extrabold transition cursor-pointer shadow-md"
             >
               Okay
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Ready Order Text Details Modal */}
+      {inspectReadyRx && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 max-w-md w-full space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Ready For Delivery</h3>
+                  <p className="text-[10px] text-slate-500 font-mono">Order: {inspectReadyRx.prescriptionId}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setInspectReadyRx(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-slate-50 rounded-2xl p-4 space-y-3 border border-slate-100">
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Patient Name</span>
+                  <span className="font-extrabold text-slate-900 text-sm">{inspectReadyRx.patientName}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Contact Mobile</span>
+                    <span className="font-bold text-slate-700 font-mono text-xs">{inspectReadyRx.mobile}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Patient ID</span>
+                    <span className="font-bold text-slate-700 font-mono text-xs">{inspectReadyRx.patientId}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-indigo-50/40 rounded-2xl p-3 border border-indigo-100 space-y-2">
+                <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider block pl-1">Ocular Refraction</span>
+                <table className="w-full text-center text-[10px]">
+                  <thead>
+                    <tr className="text-slate-400 border-b border-indigo-100/60">
+                      <th className="font-semibold pb-1.5 text-left pl-2">Eye</th>
+                      <th className="font-semibold pb-1.5">SPH</th>
+                      <th className="font-semibold pb-1.5">CYL</th>
+                      <th className="font-semibold pb-1.5">AXIS</th>
+                      <th className="font-semibold pb-1.5">ADD</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-slate-700 font-bold">
+                    <tr className="border-b border-indigo-50">
+                      <td className="py-2 text-slate-500 font-black text-left pl-2">R.E.</td>
+                      <td className="py-2">{inspectReadyRx.rightEyeData?.distance?.sph || '—'}</td>
+                      <td className="py-2">{inspectReadyRx.rightEyeData?.distance?.cyl || '—'}</td>
+                      <td className="py-2">{inspectReadyRx.rightEyeData?.distance?.axis || '—'}</td>
+                      <td className="py-2 text-indigo-600">{inspectReadyRx.rightEyeData?.add ? `+${inspectReadyRx.rightEyeData.add}` : '—'}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 text-slate-500 font-black text-left pl-2">L.E.</td>
+                      <td className="py-2">{inspectReadyRx.leftEyeData?.distance?.sph || '—'}</td>
+                      <td className="py-2">{inspectReadyRx.leftEyeData?.distance?.cyl || '—'}</td>
+                      <td className="py-2">{inspectReadyRx.leftEyeData?.distance?.axis || '—'}</td>
+                      <td className="py-2 text-indigo-600">{inspectReadyRx.leftEyeData?.add ? `+${inspectReadyRx.leftEyeData.add}` : '—'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="bg-amber-50/30 rounded-2xl p-4 space-y-3 border border-amber-100">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-[9px] font-bold text-amber-600/70 uppercase tracking-wider block">Frame Type</span>
+                    <span className="font-bold text-slate-800 text-xs">{inspectReadyRx.frameName || 'Standard Frame'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-amber-600/70 uppercase tracking-wider block">Lens Type</span>
+                    <span className="font-bold text-slate-800 text-xs">{inspectReadyRx.lensType || 'Standard Lens'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-100 flex justify-between items-center">
+                <div>
+                  <span className="text-[9px] font-bold text-emerald-600/70 uppercase tracking-wider block">Amount Paid</span>
+                  <span className="font-extrabold text-emerald-800 text-lg">₹ {inspectReadyRx.receivedCost || inspectReadyRx.actualCost}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[9px] font-bold text-emerald-600/70 uppercase tracking-wider block">Balance</span>
+                  <span className="font-extrabold text-emerald-600 text-xs">Nil / Paid in Full</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setInspectReadyRx(null)}
+              className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer"
+            >
+              Close Details
             </button>
           </div>
         </div>

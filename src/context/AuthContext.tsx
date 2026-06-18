@@ -39,6 +39,7 @@ interface AuthContextType {
   isDemoMode: boolean;
   setDemoProfile: (role: UserRole, name: string) => void;
   clearDemo: () => void;
+  updateActiveProfile: (updates: Partial<UserProfile>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -405,6 +406,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserProfile(null);
   };
 
+  const updateActiveProfile = (updates: Partial<UserProfile>) => {
+    if (!userProfile) return;
+    const updated = { ...userProfile, ...updates };
+    setUserProfile(updated);
+    
+    // Update local caches
+    if (isDemoMode) {
+      localStorage.setItem('hb_demo_profile', JSON.stringify(updated));
+    } else {
+      localStorage.setItem('hb_demo_profile', JSON.stringify(updated));
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -417,7 +431,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       isDemoMode,
       setDemoProfile,
-      clearDemo
+      clearDemo,
+      updateActiveProfile
     }}>
       {children}
     </AuthContext.Provider>
