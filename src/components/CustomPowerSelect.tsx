@@ -55,6 +55,13 @@ export function CustomPowerSelect({ value, onChange, positives, negatives, place
             >
               Plano
             </button>
+            <button 
+              type="button" 
+              onClick={() => { onChange('0.00'); setIsOpen(false); }} 
+              className="flex-1 py-1.5 text-xs font-bold bg-white border border-slate-200 hover:bg-slate-100 rounded-lg shadow-sm text-slate-600 transition-colors"
+            >
+              0.00
+            </button>
           </div>
           
           {/* 2-Column Power Grid */}

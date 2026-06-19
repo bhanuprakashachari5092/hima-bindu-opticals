@@ -1,6 +1,6 @@
 export const generateSphCylOptions = () => {
-  const positives = [];
-  const negatives = [];
+  const positives = ['0.00'];
+  const negatives = ['0.00'];
   for (let i = 0.25; i <= 20.00; i += 0.25) {
     positives.push(`+${i.toFixed(2)}`);
     negatives.push(`-${i.toFixed(2)}`);
