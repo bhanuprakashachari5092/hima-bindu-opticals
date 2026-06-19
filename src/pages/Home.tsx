@@ -528,18 +528,18 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3, duration: 0.6 }}
-              className="text-4xl md:text-6xl font-extrabold font-serif tracking-tight leading-tight"
+              className="text-4xl md:text-5xl font-extrabold font-serif tracking-tight leading-tight"
             >
-              Clear Vision.<br className="hidden md:inline" /> Better Life.
+              Hima Bindu Eye Testing Center & Opticals
             </motion.h2>
             
             <motion.p 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5, duration: 0.6 }}
-              className="text-slate-200 text-xs md:text-sm max-w-xl leading-relaxed font-semibold"
+              className="text-slate-200 text-sm md:text-lg max-w-xl leading-relaxed font-semibold"
             >
-              Step into Himabindhu Eye Testing & Opticals for precise computerized eye exams, custom power lens fitting, and a designer optical gallery tailored to your lifestyle.
+              Your Trusted Eye Clinic in Dharmavaram
             </motion.p>
             
             <motion.div 
@@ -877,23 +877,23 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="group relative p-6 bg-white border border-slate-200 rounded-2xl hover:-translate-y-2 hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/5 hover:border-amber-400 hover:bg-amber-50/5 transition-all duration-300 ease-out overflow-hidden cursor-pointer">
               <div className="absolute top-0 left-0 w-0 h-1 bg-gradient-to-r from-amber-500 to-amber-300 group-hover:w-full transition-all duration-350 ease-out" />
-              <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2 group-hover:text-amber-700 transition-colors duration-250">Computerised Refraction</h5>
-              <p className="text-slate-550 text-xs leading-normal">High-precision diagnostic testing utilizing automated refractometers for perfect eye power calculation.</p>
+              <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2 group-hover:text-amber-700 transition-colors duration-250">Computerized Eye Testing</h5>
+              <p className="text-slate-550 text-xs leading-normal">Advanced computerized eye testing for accurate vision assessment and prescription.</p>
             </div>
             <div className="group relative p-6 bg-white border border-slate-200 rounded-2xl hover:-translate-y-2 hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/5 hover:border-amber-400 hover:bg-amber-50/5 transition-all duration-300 ease-out overflow-hidden cursor-pointer">
               <div className="absolute top-0 left-0 w-0 h-1 bg-gradient-to-r from-amber-500 to-amber-300 group-hover:w-full transition-all duration-350 ease-out" />
-              <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2 group-hover:text-amber-700 transition-colors duration-250">Contact Lens Clinic</h5>
-              <p className="text-slate-550 text-xs leading-normal">Specialized fitting and evaluation for daily wear, cosmetic, and prescription contact lenses.</p>
+              <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2 group-hover:text-amber-700 transition-colors duration-250">Comprehensive Eye Examination</h5>
+              <p className="text-slate-550 text-xs leading-normal">Professional eye examinations to detect vision problems and maintain healthy eyesight.</p>
             </div>
             <div className="group relative p-6 bg-white border border-slate-200 rounded-2xl hover:-translate-y-2 hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/5 hover:border-amber-400 hover:bg-amber-50/5 transition-all duration-300 ease-out overflow-hidden cursor-pointer">
               <div className="absolute top-0 left-0 w-0 h-1 bg-gradient-to-r from-amber-500 to-amber-300 group-hover:w-full transition-all duration-350 ease-out" />
-              <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2 group-hover:text-amber-700 transition-colors duration-250">Progressive Lenses</h5>
-              <p className="text-slate-555 text-xs leading-normal">Advanced multi-focal lens customization for seamless distance-to-near transition without lines.</p>
+              <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2 group-hover:text-amber-700 transition-colors duration-250">Spectacles & Frames</h5>
+              <p className="text-slate-555 text-xs leading-normal">Premium spectacle frames and high-quality prescription lenses for all age groups.</p>
             </div>
             <div className="group relative p-6 bg-white border border-slate-200 rounded-2xl hover:-translate-y-2 hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/5 hover:border-amber-400 hover:bg-amber-50/5 transition-all duration-300 ease-out overflow-hidden cursor-pointer">
               <div className="absolute top-0 left-0 w-0 h-1 bg-gradient-to-r from-amber-500 to-amber-300 group-hover:w-full transition-all duration-350 ease-out" />
-              <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2 group-hover:text-amber-700 transition-colors duration-250">Specialty Lenses</h5>
-              <p className="text-slate-550 text-xs leading-normal">Offering Blue Cut, Blue Light, Transitions, anti-glare HMC, and durable hard coats (HC).</p>
+              <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2 group-hover:text-amber-700 transition-colors duration-250">Contact Lenses</h5>
+              <p className="text-slate-550 text-xs leading-normal">Comfortable and reliable contact lens solutions with expert guidance.</p>
             </div>
           </div>
         </div>
@@ -1204,46 +1204,29 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
 
         <div className="bg-slate-900 text-white p-6 md:p-8 rounded-3xl space-y-6 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-24 h-24 bg-slate-800/20 rounded-full filter blur-xl"></div>
-          <h4 className="font-black text-sm uppercase tracking-wider border-b border-slate-850 pb-2">Clinic Location</h4>
+          <h4 className="font-black text-sm uppercase tracking-wider border-b border-slate-850 pb-2">Hima Bindu Eye Testing Center & Opticals</h4>
           <div className="space-y-4">
             <div className="flex gap-3 text-xs">
               <MapPin className="w-5 h-5 text-amber-400 shrink-0" />
               <div>
-                <p className="font-bold text-white">Beside Apollo Pharmacy</p>
-                <p className="text-slate-400 mt-1 leading-normal">RS Road, Gandhi Nagar, Dharmavaram - 515671. (A.P.)</p>
+                <p className="font-bold text-white">Address:</p>
+                <p className="text-slate-400 mt-1 leading-normal">Dharmavaram, Andhra Pradesh, India</p>
               </div>
             </div>
-            <a 
-              href="https://maps.app.goo.gl/ajYQbKyGp9sG959c9" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="block w-full h-40 rounded-2xl overflow-hidden border border-slate-750/70 shadow-md relative group hover:border-amber-500 transition-colors duration-300"
-            >
-              <iframe 
-                src="https://maps.google.com/maps?q=Apollo%20Pharmacy,%20RS%20Road,%20Gandhi%20Nagar,%20Dharmavaram&t=k&z=18&output=embed" 
-                width="100%" 
-                height="100%" 
-                style={{ border: 0, filter: 'brightness(0.95)', pointerEvents: 'none' }} 
-                allowFullScreen={true} 
-                loading="lazy"
-                title="Himabindhu Opticals Satellite Map"
-              ></iframe>
-              
-              {/* Luxury Map Action Overlay */}
-              <div className="absolute inset-0 bg-slate-950/20 group-hover:bg-slate-950/45 transition-all duration-300 flex items-center justify-center">
-                <span className="px-4 py-2 bg-amber-500 text-slate-950 text-xs font-black rounded-xl shadow-lg transition-all duration-300 transform scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100 uppercase tracking-widest flex items-center gap-1.5">
-                  Get Directions →
-                </span>
-              </div>
-            </a>
             <div className="flex gap-3 text-xs">
               <Phone className="w-5 h-5 text-amber-400 shrink-0" />
               <div>
-                <p className="font-bold text-white">Direct Phone Support</p>
+                <p className="font-bold text-white">Phone:</p>
                 <p className="text-slate-400 font-mono mt-1 text-xs">
-                  <a href="tel:9010408092" className="hover:text-amber-450 transition-colors">90104 08092</a>,{' '}
-                  <a href="tel:7989289011" className="hover:text-amber-450 transition-colors">79892 89011</a>
+                  <a href="tel:+91XXXXXXXXXX" className="hover:text-amber-450 transition-colors">+91 XXXXXXXXXX</a>
                 </p>
+              </div>
+            </div>
+            <div className="flex gap-3 text-xs">
+              <Clock className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <p className="font-bold text-white">Timings:</p>
+                <p className="text-slate-400 mt-1 leading-normal">Monday - Saturday<br />9:00 AM - 8:00 PM</p>
               </div>
             </div>
           </div>
