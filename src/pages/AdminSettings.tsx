@@ -503,206 +503,208 @@ export default function AdminSettings() {
     <div className="space-y-8 font-sans">
       
       {/* Clinicians & RBAC controls */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Account Provisioning form */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-            <div className="flex items-center gap-3">
-              <Settings className="w-5 h-5 text-blue-400" />
-              <h3 className="font-extrabold text-white text-sm uppercase tracking-wider">Clinical Auth Manager (RBAC)</h3>
-            </div>
-            <span className="text-[9px] uppercase font-mono bg-slate-950 px-2 py-0.5 rounded text-slate-400">
-              Root Secure Desk
-            </span>
-          </div>
-
-          {successMsg && (
-            <div className="mx-6 mt-6 p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-xl flex items-start gap-2.5">
-              <UserCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-              <div className="text-xs text-emerald-800">
-                <p className="font-bold">{successMsg}</p>
-                <p className="mt-0.5 font-medium text-slate-500">The authorized staff member may now sign on inside the secure gate.</p>
+      {userProfile?.role === 'admin' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Account Provisioning form */}
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <Settings className="w-5 h-5 text-blue-400" />
+                <h3 className="font-extrabold text-white text-sm uppercase tracking-wider">Clinical Auth Manager (RBAC)</h3>
               </div>
+              <span className="text-[9px] uppercase font-mono bg-slate-950 px-2 py-0.5 rounded text-slate-400">
+                Root Secure Desk
+              </span>
             </div>
-          )}
 
-          <div className="mx-6 mt-6 p-4 bg-amber-50/20 border border-amber-200 rounded-xl text-xs text-blue-950 flex gap-2.5">
-            <ShieldAlert className="w-5 h-5 shrink-0 text-blue-500" />
-            <div>
-              <p className="font-bold">Anti-Intrusion Rule Active</p>
-              <p className="mt-1 text-slate-500 leading-normal font-semibold">
-                Self-registration is deactivated. Receptionists, welcome clerks, and optometrists must be pre-authorized under this secure panel first.
-              </p>
-            </div>
-          </div>
-
-          <form onSubmit={handleProvisionStaff} className="p-6 space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Staff Full Name
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                    <User className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="e.g., S. K. Prasad"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    className="w-full border border-slate-205 bg-slate-50/50 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition"
-                  />
+            {successMsg && (
+              <div className="mx-6 mt-6 p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-xl flex items-start gap-2.5">
+                <UserCheck className="w-5 h-5 text-emerald-650 shrink-0 mt-0.5" />
+                <div className="text-xs text-emerald-800">
+                  <p className="font-bold">{successMsg}</p>
+                  <p className="mt-0.5 font-medium text-slate-500">The authorized staff member may now sign on inside the secure gate.</p>
                 </div>
               </div>
+            )}
 
+            <div className="mx-6 mt-6 p-4 bg-amber-50/20 border border-amber-200 rounded-xl text-xs text-blue-950 flex gap-2.5">
+              <ShieldAlert className="w-5 h-5 shrink-0 text-blue-500" />
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Staff Gmail / Google Account
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                    <Mail className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="email"
-                    placeholder="e.g., prasad@google_account.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full border border-slate-205 bg-slate-50/50 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition"
-                  />
-                </div>
+                <p className="font-bold">Anti-Intrusion Rule Active</p>
+                <p className="mt-1 text-slate-500 leading-normal font-semibold">
+                  Self-registration is deactivated. Receptionists, welcome clerks, and optometrists must be pre-authorized under this secure panel first.
+                </p>
               </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Staff Login Password
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                    <PlusCircle className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="password"
-                    placeholder="Enter login password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full border border-slate-205 bg-slate-50/50 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition"
-                  />
-                </div>
-              </div>
-
             </div>
 
-            <div className="pt-4 border-t border-slate-100 flex justify-end">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-5 py-2.5 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700 hover:shadow-lg hover:shadow-amber-500/10 transition cursor-pointer flex items-center gap-1.5"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Authorizing...</span>
-                  </>
-                ) : (
-                  <>
-                    <PlusCircle className="w-4 h-4" />
-                    <span>Provision Credentials</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Staff roster directory */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 self-start">
-          <div className="flex items-center gap-2 mb-4 border-b pb-3 border-slate-100">
-            <Users className="w-5 h-5 text-amber-600" />
-            <h4 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Authorized Clinicians</h4>
-          </div>
-
-          {loading ? (
-            <div className="py-8 text-center text-slate-400 flex flex-col items-center justify-center text-xs">
-              <Loader2 className="w-6 h-6 animate-spin text-amber-600 mb-2" />
-              <p>Fetching clinician registry...</p>
-            </div>
-          ) : staffList.length === 0 ? (
-            <p className="text-xs text-slate-400 text-center py-6">
-              Roster empty. Provision new accounts on the left.
-            </p>
-          ) : (
-            <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
-              {staffList.map((staff) => {
-                const isClaimed = staff.docIds ? staff.docIds.some((id: string) => !id.startsWith('temp_')) : (staff.uid && !staff.uid.startsWith('temp_'));
-                return (
-                  <div 
-                    key={staff.email} 
-                    className="p-3 bg-slate-50 border border-slate-150 rounded-xl relative group flex justify-between items-center transition hover:bg-slate-100/50"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        {staff.role === 'admin' ? (
-                          <Shield className="w-3.5 h-3.5 text-amber-600" />
-                        ) : (
-                          <User className="w-3.5 h-3.5 text-slate-600" />
-                        )}
-                        <h5 className="font-bold text-slate-800 text-xs truncate">{staff.name}</h5>
-                      </div>
-                      <p className="text-[9px] text-slate-450 mt-1 font-mono break-all font-semibold select-all">{staff.email}</p>
-                      
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="inline-block text-[8px] uppercase font-black tracking-widest text-amber-600 bg-amber-50/25 border border-amber-200 px-1.5 py-0.5 rounded">
-                          {staff.role}
-                        </span>
-                        {isDemoMode ? null : isClaimed ? (
-                          <span className="inline-block text-[8px] uppercase font-black tracking-widest text-emerald-600 bg-emerald-50/25 border border-emerald-200 px-1.5 py-0.5 rounded">
-                            Active
-                          </span>
-                        ) : (
-                          <span className="inline-block text-[8px] uppercase font-black tracking-widest text-orange-600 bg-orange-50/25 border border-orange-200 px-1.5 py-0.5 rounded animate-pulse">
-                            Pending Setup
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 shrink-0 pl-2">
-                      <button
-                        onClick={() => handleRenameStaff(staff)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition opacity-60 hover:opacity-100 cursor-pointer"
-                        title="Rename staff member"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleRevokeStaff(staff)}
-                        className="p-1.5 text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition opacity-60 hover:opacity-100 cursor-pointer"
-                        title="De-authorize clinician immediately"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+            <form onSubmit={handleProvisionStaff} className="p-6 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Staff Full Name
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <User className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="e.g., S. K. Prasad"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      className="w-full border border-slate-205 bg-slate-50/50 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition"
+                    />
                   </div>
-                );
-              })}
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Staff Gmail / Google Account
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <Mail className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="email"
+                      placeholder="e.g., prasad@google_account.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="w-full border border-slate-205 bg-slate-50/50 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Staff Login Password
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <PlusCircle className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="password"
+                      placeholder="Enter login password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="w-full border border-slate-205 bg-slate-50/50 focus:bg-white rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 font-bold focus:border-blue-600 focus:outline-hidden transition"
+                    />
+                  </div>
+                </div>
+
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700 hover:shadow-lg hover:shadow-amber-500/10 transition cursor-pointer flex items-center gap-1.5"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Authorizing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <PlusCircle className="w-4 h-4" />
+                      <span>Provision Credentials</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Staff roster directory */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 self-start">
+            <div className="flex items-center gap-2 mb-4 border-b pb-3 border-slate-100">
+              <Users className="w-5 h-5 text-amber-600" />
+              <h4 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Authorized Clinicians</h4>
             </div>
-          )}
+
+            {loading ? (
+              <div className="py-8 text-center text-slate-400 flex flex-col items-center justify-center text-xs">
+                <Loader2 className="w-6 h-6 animate-spin text-amber-600 mb-2" />
+                <p>Fetching clinician registry...</p>
+              </div>
+            ) : staffList.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-6">
+                Roster empty. Provision new accounts on the left.
+              </p>
+            ) : (
+              <div className="space-y-3 max-h-90 overflow-y-auto pr-1">
+                {staffList.map((staff) => {
+                  const isClaimed = staff.docIds ? staff.docIds.some((id: string) => !id.startsWith('temp_')) : (staff.uid && !staff.uid.startsWith('temp_'));
+                  return (
+                    <div 
+                      key={staff.email} 
+                      className="p-3 bg-slate-50 border border-slate-150 rounded-xl relative group flex justify-between items-center transition hover:bg-slate-100/50"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          {staff.role === 'admin' ? (
+                            <Shield className="w-3.5 h-3.5 text-amber-600" />
+                          ) : (
+                            <User className="w-3.5 h-3.5 text-slate-600" />
+                          )}
+                          <h5 className="font-bold text-slate-800 text-xs truncate">{staff.name}</h5>
+                        </div>
+                        <p className="text-[9px] text-slate-450 mt-1 font-mono break-all font-semibold select-all">{staff.email}</p>
+                        
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="inline-block text-[8px] uppercase font-black tracking-widest text-amber-600 bg-amber-50/25 border border-amber-200 px-1.5 py-0.5 rounded">
+                            {staff.role}
+                          </span>
+                          {isDemoMode ? null : isClaimed ? (
+                            <span className="inline-block text-[8px] uppercase font-black tracking-widest text-emerald-600 bg-emerald-50/25 border border-emerald-200 px-1.5 py-0.5 rounded">
+                              Active
+                            </span>
+                          ) : (
+                            <span className="inline-block text-[8px] uppercase font-black tracking-widest text-orange-600 bg-orange-50/25 border border-orange-200 px-1.5 py-0.5 rounded animate-pulse">
+                              Pending Setup
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0 pl-2">
+                        <button
+                          onClick={() => handleRenameStaff(staff)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition opacity-60 hover:opacity-100 cursor-pointer"
+                          title="Rename staff member"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleRevokeStaff(staff)}
+                          className="p-1.5 text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition opacity-60 hover:opacity-100 cursor-pointer"
+                          title="De-authorize clinician immediately"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* CLINIC CONSULTING SCHEDULE & STATUS CUSTOMIZER */}
-      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden relative" id="clinic-schedule-customizer">
+      <div className="bg-white rounded-4xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden relative" id="clinic-schedule-customizer">
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
-        <div className="p-6 md:p-8 bg-gradient-to-br from-slate-900 to-slate-950 text-white flex items-center justify-between border-b border-slate-800 relative overflow-hidden">
+        <div className="p-6 md:p-8 bg-linear-to-br from-slate-900 to-slate-950 text-white flex items-center justify-between border-b border-slate-800 relative overflow-hidden">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none"></div>
           <div className="flex items-center gap-4 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-[inset_0_1px_3px_rgba(255,255,255,0.6)] shadow-amber-500/30">
+            <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-[inset_0_1px_3px_rgba(255,255,255,0.6)] shadow-amber-500/30">
               <Clock className="w-6 h-6 text-amber-950" />
             </div>
             <div>
@@ -859,7 +861,7 @@ export default function AdminSettings() {
           <div className="pt-8 mt-2 border-t-2 border-slate-100 flex justify-end">
             <button
               type="submit"
-              className="group px-8 py-3.5 bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white rounded-2xl font-black uppercase tracking-wider text-xs transition-all shadow-[0_4px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:-translate-y-1 cursor-pointer flex items-center gap-3"
+              className="group px-8 py-3.5 bg-linear-to-r from-slate-900 to-slate-800 hover:from-slate-850 hover:to-slate-750 text-white rounded-2xl font-black uppercase tracking-wider text-xs transition-all shadow-[0_4px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:-translate-y-1 cursor-pointer flex items-center gap-3"
             >
               <CheckCircle2 className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
               <span>Update Clinic Status & Hours</span>
@@ -910,7 +912,7 @@ export default function AdminSettings() {
                 };
                 handleClearDatabase();
               }}
-              className="px-6 py-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium border border-red-200 text-xs font-black uppercase tracking-wider"
+              className="px-6 py-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors border border-red-200 text-xs font-black uppercase tracking-wider"
             >
               Clear Local Data
             </button>

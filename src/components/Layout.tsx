@@ -62,7 +62,7 @@ export default function Layout({ activeTab, setActiveTab, children }: LayoutProp
       id: 'admin', 
       label: 'Admin Settings', 
       icon: Settings, 
-      roles: ['admin'] as UserRole[] 
+      roles: ['admin', 'doctor', 'receptionist'] as UserRole[] 
     }
   ];
 
@@ -82,7 +82,7 @@ export default function Layout({ activeTab, setActiveTab, children }: LayoutProp
             {activeTab === 'prescription' ? (
               <button 
                 onClick={() => setActiveTab('dashboard')}
-                className="px-4 py-2 bg-gradient-to-r from-slate-900 to-slate-850 hover:from-slate-850 hover:to-slate-800 text-teal-400 font-extrabold rounded-xl text-xs flex items-center gap-2 border border-slate-700/60 transition-all duration-200 cursor-pointer shadow-lg hover:shadow-teal-500/5 hover:scale-[1.02]"
+                className="px-4 py-2 bg-linear-to-r from-slate-900 to-slate-850 hover:from-slate-850 hover:to-slate-800 text-teal-400 font-extrabold rounded-xl text-xs flex items-center gap-2 border border-slate-700/60 transition-all duration-200 cursor-pointer shadow-lg hover:shadow-teal-500/5 hover:scale-[1.02]"
               >
                 <span className="text-sm">←</span> Back to Dashboard
               </button>
@@ -98,14 +98,14 @@ export default function Layout({ activeTab, setActiveTab, children }: LayoutProp
             )}
             <div className="flex items-center gap-2 sm:gap-3.5">
               <div className="relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-xl blur opacity-30 animate-pulse"></div>
-                <div className="relative bg-gradient-to-br from-slate-900 to-slate-950 p-1 sm:p-1.5 rounded-xl border border-slate-800 flex items-center justify-center shadow-lg group">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-teal-600/20 to-emerald-400/20 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none rounded-xl"></div>
+                <div className="absolute -inset-1 bg-linear-to-r from-teal-500 to-emerald-500 rounded-xl blur opacity-30 animate-pulse"></div>
+                <div className="relative bg-linear-to-br from-slate-900 to-slate-950 p-1 sm:p-1.5 rounded-xl border border-slate-800 flex items-center justify-center shadow-lg group">
+                  <div className="absolute inset-0 bg-linear-to-tr from-teal-600/20 to-emerald-400/20 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none rounded-xl"></div>
                   <img src="/hima-logo.png" alt="Himabindhu Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-contain scale-[1.25] relative z-20 drop-shadow-md" />
                 </div>
               </div>
               <div>
-                <span className="font-extrabold tracking-[0.12em] text-xs sm:text-sm md:text-base block text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-teal-200 uppercase cursor-default">
+                <span className="font-extrabold tracking-[0.12em] text-xs sm:text-sm md:text-base block text-transparent bg-clip-text bg-linear-to-r from-white via-slate-100 to-teal-200 uppercase cursor-default">
                   HIMABINDHU EYE CLINIC
                 </span>
                 <div className="flex items-center gap-1.5 mt-0.5">
@@ -120,8 +120,8 @@ export default function Layout({ activeTab, setActiveTab, children }: LayoutProp
 
           {/* Realtime Luxury Digital Clock - Centered exactly */}
           <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center justify-center pointer-events-none z-10">
-            <div className="bg-gradient-to-b from-slate-900 to-black border border-slate-700/80 px-4 py-1.5 rounded-lg shadow-[inset_0_1px_3px_rgba(255,255,255,0.05),0_4px_15px_rgba(245,158,11,0.15)] relative overflow-hidden ring-1 ring-amber-500/30 group pointer-events-auto cursor-default">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            <div className="bg-linear-to-b from-slate-900 to-black border border-slate-700/80 px-4 py-1.5 rounded-lg shadow-[inset_0_1px_3px_rgba(255,255,255,0.05),0_4px_15px_rgba(245,158,11,0.15)] relative overflow-hidden ring-1 ring-amber-500/30 group pointer-events-auto cursor-default">
+              <div className="absolute inset-0 bg-linear-to-r from-transparent via-amber-500/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
               
               <div className="relative flex items-center gap-2.5">
                 <Clock className="w-4 h-4 text-amber-500/90 drop-shadow-[0_0_3px_rgba(245,158,11,0.8)]" />
@@ -132,7 +132,7 @@ export default function Layout({ activeTab, setActiveTab, children }: LayoutProp
                   <span className="text-amber-600/90 font-mono font-extrabold text-[14px] leading-none ml-0.5 pb-[1.5px] mix-blend-lighten drop-shadow-[0_0_5px_rgba(245,158,11,0.4)]">
                     {pad(seconds)}
                   </span>
-                  <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest ml-2.5 leading-none pb-[4px] bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                  <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest ml-2.5 leading-none pb-1 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
                     {ampm}
                   </span>
                 </div>
@@ -143,16 +143,16 @@ export default function Layout({ activeTab, setActiveTab, children }: LayoutProp
           <div className="flex items-center gap-3 md:gap-4">
             {/* Classic Luxury Profile Badge */}
             {userProfile && (
-              <div className="flex items-center gap-3 bg-gradient-to-b from-slate-800 to-slate-900 p-1 pr-4 pl-1.5 rounded-full border border-slate-700/60 shadow-[0_2px_10px_rgba(0,0,0,0.3)]">
+              <div className="flex items-center gap-3 bg-linear-to-b from-slate-800 to-slate-900 p-1 pr-4 pl-1.5 rounded-full border border-slate-700/60 shadow-[0_2px_10px_rgba(0,0,0,0.3)]">
                 <div className="relative">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 text-amber-950 flex items-center justify-center font-black text-sm shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)] ring-2 ring-slate-800">
+                  <div className="w-9 h-9 rounded-full bg-linear-to-br from-amber-200 via-amber-400 to-amber-600 text-amber-950 flex items-center justify-center font-black text-sm shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)] ring-2 ring-slate-800">
                     {userProfile.name.charAt(0).toUpperCase()}
                   </div>
                   <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-slate-800 bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
                 </div>
                 <div className="text-left hidden sm:flex flex-col justify-center">
                   <span className="text-[13px] font-extrabold text-slate-100 tracking-wide leading-tight">{userProfile.name}</span>
-                  <span className={`inline-flex items-center mt-0.5 border px-2 py-[1px] rounded bg-slate-950/50 text-[9px] font-black uppercase tracking-widest shadow-inner w-fit ${
+                  <span className={`inline-flex items-center mt-0.5 border px-2 py-px rounded bg-slate-950/50 text-[9px] font-black uppercase tracking-widest shadow-inner w-fit ${
                     userProfile.role === 'admin' 
                       ? 'text-amber-400 border-amber-500/30' 
                       : 'text-teal-400 border-teal-500/30'
@@ -167,7 +167,7 @@ export default function Layout({ activeTab, setActiveTab, children }: LayoutProp
             <button 
               onClick={logout} 
               title="Logout Clinic Terminal Session"
-              className="flex items-center gap-2 p-2.5 md:px-4 md:py-2 bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700/60 rounded-full text-slate-300 hover:text-white hover:from-rose-600 hover:to-rose-800 hover:border-rose-500 transition-all duration-300 shadow-[0_2px_10px_rgba(0,0,0,0.2)] hover:shadow-[0_0_15px_rgba(225,29,72,0.4)] group cursor-pointer"
+              className="flex items-center gap-2 p-2.5 md:px-4 md:py-2 bg-linear-to-b from-slate-800 to-slate-900 border border-slate-700/60 rounded-full text-slate-300 hover:text-white hover:from-rose-600 hover:to-rose-800 hover:border-rose-500 transition-all duration-300 shadow-[0_2px_10px_rgba(0,0,0,0.2)] hover:shadow-[0_0_15px_rgba(225,29,72,0.4)] group cursor-pointer"
             >
               <LogOut className="w-4 h-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
               <span className="hidden md:block text-xs font-black uppercase tracking-widest">Logout</span>
@@ -198,7 +198,7 @@ export default function Layout({ activeTab, setActiveTab, children }: LayoutProp
               >
                 <div className="flex items-center justify-between mb-4 border-b border-slate-800 p-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg border border-slate-700 shadow-inner">
+                    <div className="p-1.5 bg-linear-to-br from-slate-800 to-slate-900 rounded-lg border border-slate-700 shadow-inner">
                       <Eye className="w-5 h-5 text-teal-400" />
                     </div>
                     <span className="font-extrabold text-white tracking-widest uppercase text-sm">MENU</span>

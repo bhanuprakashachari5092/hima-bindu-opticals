@@ -164,7 +164,7 @@ export default function FrameCollection({ frameTypeId, onBack }: FrameCollection
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             {frameType.tags}
           </span>
-          <h1 className="text-4xl md:text-5xl font-black uppercase font-serif tracking-wider bg-gradient-to-r from-white via-amber-100 to-amber-300 bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-5xl font-black uppercase font-serif tracking-wider bg-linear-to-r from-white via-amber-100 to-amber-300 bg-clip-text text-transparent">
             {frameType.name}
           </h1>
           <p className="text-slate-400 text-sm leading-relaxed max-w-lg mx-auto">
@@ -192,9 +192,9 @@ export default function FrameCollection({ frameTypeId, onBack }: FrameCollection
               className="group bg-slate-900 border border-slate-800 hover:border-amber-500/60 rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 flex flex-col"
             >
               {/* Image */}
-              <div className="relative bg-white aspect-[4/3] overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent z-10 pointer-events-none" />
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500 to-transparent z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative bg-white aspect-4/3 overflow-hidden">
+                <div className="absolute inset-0 bg-linear-to-t from-slate-950/70 via-transparent to-transparent z-10 pointer-events-none" />
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-transparent via-amber-500 to-transparent z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <img
                   src={model.image}
                   alt={model.name}
@@ -216,7 +216,7 @@ export default function FrameCollection({ frameTypeId, onBack }: FrameCollection
                   <p className="text-slate-400 text-xs leading-relaxed">{model.desc}</p>
                 </div>
                 {/* Animated underline */}
-                <div className="h-[1px] bg-gradient-to-r from-amber-500 to-transparent w-0 group-hover:w-full transition-all duration-500 rounded-full mt-2" />
+                <div className="h-px bg-linear-to-r from-amber-500 to-transparent w-0 group-hover:w-full transition-all duration-500 rounded-full mt-2" />
               </div>
             </motion.div>
           ))}

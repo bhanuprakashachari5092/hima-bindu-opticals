@@ -38,7 +38,7 @@ export function CustomPowerSelect({ value, onChange, positives, negatives, place
       </button>
 
       {isOpen && (
-        <div className="absolute z-[100] top-full left-0 mt-1 w-64 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden flex flex-col max-h-[300px]">
+        <div className="absolute z-100 top-full left-0 mt-1 w-64 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden flex flex-col max-h-75">
           {/* Quick Actions Header */}
           <div className="flex gap-2 p-2 border-b border-slate-100 bg-slate-50 shrink-0">
             <button 

@@ -55,7 +55,7 @@ const replacement = `            {/* Advice Columns (Only Selected to save paper
               </div>
 
               {/* Dynamic Signature Area inside Column 3 */}
-              <div className="w-32 border border-dashed border-slate-250 bg-slate-50/50 rounded-xl p-2 flex flex-col justify-end items-center min-h-[50px] shadow-3xs shrink-0 mt-auto">
+              <div className="w-32 border border-dashed border-slate-250 bg-slate-50/50 rounded-xl p-2 flex flex-col justify-end items-center min-h-12.5 shadow-3xs shrink-0 mt-auto">
                 <div className="w-20 border-b border-dashed border-slate-400 h-5 mb-1 flex items-end justify-center select-none font-serif italic text-[10px] text-slate-350">
                   Sign Verified
                 </div>

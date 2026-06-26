@@ -89,7 +89,7 @@ export default function Login() {
       )}
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="mx-auto h-20 w-20 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 shadow-xl shadow-slate-900/30 flex items-center justify-center border border-slate-800 p-2">
+        <div className="mx-auto h-20 w-20 rounded-2xl bg-linear-to-br from-slate-900 to-slate-950 shadow-xl shadow-slate-900/30 flex items-center justify-center border border-slate-800 p-2">
           <img src="/hima-logo.png" alt="Himabindhu Eye Clinic Logo" className="w-full h-full object-contain scale-[1.3] drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" />
         </div>
         <h2 className="mt-6 text-center text-3xl font-black text-slate-900 font-serif tracking-tight">

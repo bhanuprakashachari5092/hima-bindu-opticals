@@ -567,7 +567,7 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
                 : "No matching records found in this sequence."}
             </div>
           ) : (
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-150 overflow-y-auto pr-1">
               {filteredRx.map((rx) => {
                 const isCurrentSelected = selectedRx?.prescriptionId === rx.prescriptionId;
                 const isPlaceholder = (rx as any).isPlaceholder;
@@ -612,7 +612,7 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
                               handleInspect(rx);
                               handleEditInitialize(rx);
                             }}
-                            className="text-[10px] bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200 text-teal-700 px-3 py-1.5 rounded-lg font-bold hover:bg-gradient-to-br hover:from-teal-500 hover:to-emerald-600 hover:text-white hover:border-transparent hover:-translate-y-0.5 hover:shadow-md hover:shadow-teal-500/30 transition-all duration-300 ease-out flex items-center gap-1.5 cursor-pointer group"
+                            className="text-[10px] bg-linear-to-br from-teal-50 to-emerald-50 border border-teal-200 text-teal-700 px-3 py-1.5 rounded-lg font-bold hover:bg-linear-to-br hover:from-teal-500 hover:to-emerald-600 hover:text-white hover:border-transparent hover:-translate-y-0.5 hover:shadow-md hover:shadow-teal-500/30 transition-all duration-300 ease-out flex items-center gap-1.5 cursor-pointer group"
                           >
                             <Edit3 className="w-3 h-3 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
                             Edit
@@ -624,7 +624,7 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
                                 handleDeletePrescription(rx);
                               }
                             }}
-                            className="text-[10px] bg-gradient-to-br from-rose-50 to-red-50 border border-red-200 text-red-700 px-3 py-1.5 rounded-lg font-bold hover:bg-gradient-to-br hover:from-rose-500 hover:to-red-600 hover:text-white hover:border-transparent hover:-translate-y-0.5 hover:shadow-md hover:shadow-red-500/30 transition-all duration-300 ease-out flex items-center gap-1.5 cursor-pointer group"
+                            className="text-[10px] bg-linear-to-br from-rose-50 to-red-50 border border-red-200 text-red-700 px-3 py-1.5 rounded-lg font-bold hover:bg-linear-to-br hover:from-rose-500 hover:to-red-600 hover:text-white hover:border-transparent hover:-translate-y-0.5 hover:shadow-md hover:shadow-red-500/30 transition-all duration-300 ease-out flex items-center gap-1.5 cursor-pointer group"
                           >
                             <Trash2 className="w-3 h-3 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />
                             Delete
@@ -636,7 +636,7 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
                           e.stopPropagation();
                           handleInspect(rx);
                         }}
-                        className="text-[10px] bg-gradient-to-br from-slate-50 to-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg font-bold hover:bg-gradient-to-br hover:from-slate-800 hover:to-slate-900 hover:text-white hover:border-transparent hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-900/30 transition-all duration-300 ease-out flex items-center gap-1.5 cursor-pointer group"
+                        className="text-[10px] bg-linear-to-br from-slate-50 to-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg font-bold hover:bg-linear-to-br hover:from-slate-800 hover:to-slate-900 hover:text-white hover:border-transparent hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-900/30 transition-all duration-300 ease-out flex items-center gap-1.5 cursor-pointer group"
                       >
                         <Eye className="w-3 h-3 transition-transform duration-300 group-hover:scale-110" />
                         {isPlaceholder ? "Add Eyesight" : "Inspect Spec"}
@@ -649,7 +649,7 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
           )}
         </div>        {/* Right column: Standby view & instructions */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm h-full flex flex-col min-h-[350px]">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm h-full flex flex-col min-h-87.5">
             <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
               <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
                 <CheckCircle2 className="w-5 h-5" />
@@ -1037,7 +1037,7 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
 
       {/* Notification Toast Modal */}
       {notification && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-150 max-w-sm w-full overflow-hidden p-6 text-center space-y-5">
             <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center ${
               notification.type === 'success' 
@@ -1071,7 +1071,7 @@ export default function PatientHistory({ selectedRxFromOutside, clearOutsideSele
 
       {/* Ready Order Text Details Modal */}
       {inspectReadyRx && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
           <div className="bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 max-w-md w-full space-y-6">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">

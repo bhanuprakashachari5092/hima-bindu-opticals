@@ -157,10 +157,10 @@ export default function App() {
     <AuthProvider>
       <TerminalConsole />
       {showInstallBanner && (
-        <div className="fixed bottom-6 right-6 z-[9999] max-w-sm bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl shadow-xl p-4 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed bottom-6 right-6 z-9999 max-w-sm bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl shadow-xl p-4 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
                 <Download className="w-5 h-5" />
               </div>
               <div>

@@ -978,7 +978,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
           {/* Main Panel: Prescription/Patient Queue & Patient Registration */}
           <div className="w-full bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
             {/* Ultra Luxury Header Tabs */}
-            <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-5 border-b border-slate-800/80 relative overflow-hidden">
+            <div className="bg-linear-to-r from-slate-950 via-slate-900 to-slate-950 p-5 border-b border-slate-800/80 relative overflow-hidden">
               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none"></div>
               
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative z-10">
@@ -995,7 +995,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                     }`}
                   >
                     {receptionTab === 'orders' && (
-                      <span className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-400 opacity-90 rounded-xl"></span>
+                      <span className="absolute inset-0 bg-linear-to-r from-teal-500 to-emerald-400 opacity-90 rounded-xl"></span>
                     )}
                     <Glasses className={`w-4 h-4 relative z-10 ${receptionTab === 'orders' ? 'text-white animate-pulse' : ''}`} />
                     <span className="relative z-10">Spectacle Queue</span>
@@ -1020,7 +1020,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                     }`}
                   >
                     {receptionTab === 'register' && (
-                      <span className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-400 opacity-90 rounded-xl"></span>
+                      <span className="absolute inset-0 bg-linear-to-r from-amber-500 to-orange-400 opacity-90 rounded-xl"></span>
                     )}
                     <User className={`w-4 h-4 relative z-10 ${receptionTab === 'register' ? 'text-white animate-bounce' : ''}`} />
                     <span className="relative z-10">{editingPatientId ? 'Edit Patient' : 'Register New'}</span>
@@ -1028,7 +1028,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
                 </div>
 
                 {receptionTab === 'orders' && (
-                  <div className="relative shrink-0 w-full sm:max-w-[240px]">
+                  <div className="relative shrink-0 w-full sm:max-w-60">
                     <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                       <Search className="w-4 h-4" />
                     </span>
@@ -1044,7 +1044,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto max-h-[550px] divide-y divide-slate-100 min-h-[300px]">
+            <div className="flex-1 overflow-y-auto max-h-137.5 divide-y divide-slate-100 min-h-75">
               {receptionTab === 'orders' ? (
                 loading ? (
                   <div className="p-16 text-center text-slate-400 font-bold flex flex-col items-center justify-center">
@@ -1115,7 +1115,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
 
         {/* Spectacle Customizer Desk Modal */}
         {selectedRx && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto">
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto">
             <div className="bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 max-w-2xl w-full my-auto space-y-6 relative max-h-[90vh] overflow-y-auto">
               <button
                 onClick={() => setSelectedRx(null)}
@@ -1921,7 +1921,7 @@ export default function Dashboard({ setActiveTab, setSelectedPrescriptionForView
             </button>
           </div>
 
-          <div className="overflow-x-auto min-h-[150px]">
+          <div className="overflow-x-auto min-h-37.5">
             {receptionTab === 'register' || editingPatientId ? (
               <div className="border-b border-slate-100 bg-white">
                 {renderRegistrationForm()}

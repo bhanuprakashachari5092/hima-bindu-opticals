@@ -611,7 +611,7 @@ export function PrescriptionPDFViewerPanel({ prescription, hideWhatsApp }: Presc
       </div>
 
       {showIframe ? (
-        <div className="w-full h-[650px] bg-slate-100 p-2">
+        <div className="w-full h-162.5 bg-slate-100 p-2">
           <PDFViewer width="100%" height="100%" className="border-0 rounded-xl shadow-inner">
             <PrescriptionPDFDocument prescription={prescription} />
           </PDFViewer>
@@ -649,7 +649,7 @@ export function PrescriptionPrintTemplate({ prescription }: { prescription: any 
     <>
 
         <div className="w-full p-1 md:p-2 bg-slate-50 border-t border-gray-100 transition duration-150">
-          <div className="border border-slate-300 rounded-2xl bg-white p-3 md:p-4.5 shadow-sm relative font-sans text-slate-900 border-double border-4 w-full max-w-3xl mx-auto">
+          <div className="border-4 border-double border-slate-300 rounded-2xl bg-white p-3 md:p-4.5 shadow-sm relative font-sans text-slate-900 w-full max-w-3xl mx-auto">
             
             {/* Header letterhead pattern */}
             <div className="grid grid-cols-[60px_1fr_120px] items-center border-b-2 border-teal-850 pb-3 mb-3 gap-3">
@@ -855,7 +855,7 @@ export function PrescriptionPrintTemplate({ prescription }: { prescription: any 
               </div>
 
               {/* Dynamic Signature Area inside Column 3 */}
-              <div className="w-32 border border-dashed border-slate-250 bg-slate-50/50 rounded-xl p-2 flex flex-col justify-end items-center min-h-[50px] shadow-3xs shrink-0 mt-auto">
+              <div className="w-32 border border-dashed border-slate-250 bg-slate-50/50 rounded-xl p-2 flex flex-col justify-end items-center min-h-12.5 shadow-3xs shrink-0 mt-auto">
                 <div className="w-20 border-b border-dashed border-slate-400 h-5 mb-1 flex items-end justify-center select-none font-serif italic text-[10px] text-slate-350">
                   Sign Verified
                 </div>
@@ -869,7 +869,7 @@ export function PrescriptionPrintTemplate({ prescription }: { prescription: any 
                 <span className="text-[9.5px] uppercase font-black tracking-widest text-slate-900 block mb-1">
                   Clinical Remarks & Dynamic Notes:
                 </span>
-                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 font-sans italic min-h-[30px] leading-relaxed shadow-3xs">
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 font-sans italic min-h-7.5 leading-relaxed shadow-3xs">
                   {prescription.notes}
                 </div>
               </div>

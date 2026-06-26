@@ -447,7 +447,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       {/* Top Header Navigation */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3 md:px-8 md:py-5 flex items-center justify-between transition-all duration-300">
         <div className="flex items-center gap-4.5">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg shadow-slate-900/15 transform hover:scale-105 transition-transform flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 p-1.5">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg shadow-slate-900/15 transform hover:scale-105 transition-transform flex items-center justify-center bg-linear-to-br from-slate-900 to-slate-950 border border-slate-800 p-1.5">
             <img src="/hima-logo.png" alt="Himabindhu Eye Testing Logo" className="w-full h-full object-contain scale-[1.3] pointer-events-none select-none drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
           </div>
           <div className="space-y-1">
@@ -475,7 +475,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
           <a href="#services" className="text-sm font-bold text-slate-700 hover:text-slate-900 px-3 py-2 rounded-xl transition hidden sm:inline-block hover:bg-slate-50">Clinic Services</a>
           <button 
             onClick={onNavigateToLogin}
-            className="px-5 py-2.5 bg-gradient-to-r from-slate-900 to-amber-700 text-white rounded-xl text-xs md:text-sm font-extrabold hover:from-slate-950 hover:to-amber-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 shadow-sm"
+            className="px-5 py-2.5 bg-linear-to-r from-slate-900 to-amber-700 text-white rounded-xl text-xs md:text-sm font-extrabold hover:from-slate-950 hover:to-amber-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 shadow-sm"
           >
             <Lock className="w-4 h-4" />
             Staff Portal
@@ -483,7 +483,6 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
         </div>
       </header>
 
-      {/* Hero Section */}
       <section className="relative overflow-hidden text-white py-14 px-4 sm:py-28 sm:px-6 border-b border-teal-950">
         {/* Background Video with image fallback poster */}
         <video
@@ -491,81 +490,58 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
-          style={{ opacity: 0.45 }}
-          poster="/eye_testing_bg.png"
+          className="absolute inset-0 w-full h-full object-cover z-0 filter brightness-[0.45]"
+          poster="/eyesight-testing-video-thumbnail.jpg"
         >
-          <source src="/eye_testing_video.mp4" type="video/mp4" />
+          <source src="/eyesight-testing-clinic-video.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
         </video>
 
-        {/* Animated Gradient Overlay */}
-        <div className="absolute inset-0 animate-gradient-bg opacity-75 mix-blend-multiply pointer-events-none z-10"></div>
-
-        <div className="absolute inset-0 opacity-10 pointer-events-none z-0">
-          <div className="absolute top-12 left-10 w-96 h-96 rounded-full bg-amber-50/200 filter blur-3xl"></div>
-          <div className="absolute bottom-12 right-10 w-96 h-96 rounded-full bg-amber-50/250 filter blur-3xl"></div>
-        </div>
+        {/* Ambient colored lights */}
+        <div className="absolute top-0 left-0 w-full h-full bg-slate-950/50 z-0 pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none translate-x-1/3 translate-y-1/3 z-0" />
+        <div className="absolute top-0 left-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none -translate-x-1/3 -translate-y-1/3 z-0" />
         
-        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 items-center gap-12 relative z-10">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
           {/* Left Column: Copy & Actions */}
           <motion.div 
-            initial={{ opacity: 0, x: -30 }}
+            initial={{ opacity: 0, x: -35 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="lg:col-span-7 space-y-6 text-center lg:text-left"
+            className="lg:col-span-7 space-y-5 text-center lg:text-left"
           >
-            <motion.span 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/60 border border-amber-500/30 text-[10px] uppercase font-black tracking-widest text-amber-300"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Computerised Eye Testing & Contact Lens Clinic
-            </motion.span>
+            <span className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 border border-amber-500/30 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest text-amber-450 shadow-inner">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+              Advanced Refraction Clinic
+            </span>
             
-            <motion.h2 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="text-4xl md:text-5xl font-extrabold font-serif tracking-tight leading-tight"
-            >
-              Hima Bindu Eye Testing Center & Opticals
-            </motion.h2>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black font-serif leading-tight tracking-wide text-transparent bg-clip-text bg-linear-to-r from-white via-slate-100 to-amber-200">
+              PRECISION VISION CARE <br />
+              <span className="text-amber-500">EXPERT CLINICAL Refraction</span>
+            </h2>
             
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5, duration: 0.6 }}
-              className="text-slate-200 text-sm md:text-lg max-w-xl leading-relaxed font-semibold"
-            >
-              Your Trusted Eye Clinic in Dharmavaram
-            </motion.p>
+            <p className="text-slate-300 text-xs md:text-sm leading-relaxed max-w-xl mx-auto lg:mx-0 font-medium">
+              Himabindhu Eye Testing & Opticals offers high-precision diagnostic services under the expert care of M. Nagaraja Achari. Combining advanced computerized eye exam technology with decades of clinical experience, we assure absolutely precise prescriptions and the perfect lens styling for your eyes.
+            </p>
             
-            <motion.div 
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.6 }}
-              className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4 pt-2 w-full sm:w-auto"
-            >
+            <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-4">
               <a 
                 href="#prescription-finder" 
-                className="w-full sm:w-auto justify-center px-6 py-3.5 bg-amber-600 hover:bg-amber-800 hover:scale-[1.03] text-white text-xs font-extrabold rounded-2xl shadow-lg shadow-amber-500/20 transition flex items-center gap-2 transform duration-200"
+                className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs md:text-sm font-extrabold shadow-lg shadow-amber-600/20 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
               >
-                <Search className="w-4.5 h-4.5" />
-                Find Your Prescription (Rx)
+                <Search className="w-4 h-4" />
+                Find My Prescription
               </a>
               <a 
-                href="#timings" 
-                className="w-full sm:w-auto justify-center px-6 py-3.5 bg-white/10 hover:bg-white/15 hover:scale-[1.03] text-white border border-white/20 text-xs font-bold rounded-2xl transition flex items-center gap-2 transform duration-200"
+                href="#services" 
+                className="px-6 py-3 bg-white/10 hover:bg-white/15 border border-white/20 text-white rounded-xl text-xs md:text-sm font-extrabold transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
-                <Clock className="w-4.5 h-4.5" />
-                Check consulting Hours
+                Our Services
               </a>
-            </motion.div>
+            </div>
           </motion.div>
 
-          {/* Right Column: Clean Professional Telugu Typography without container box */}
+          {/* Right Column: Clean Professional Telugu Typography */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -573,16 +549,16 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
             className="lg:col-span-5 flex flex-col justify-center text-center space-y-4 font-telugu"
           >
             <h3 
-              className="text-4xl sm:text-5xl md:text-7xl font-black leading-none tracking-wider select-none bg-gradient-to-r from-white via-amber-100 to-amber-400 bg-clip-text text-transparent filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
+              className="text-4xl sm:text-5xl md:text-7xl font-black leading-none tracking-wider select-none bg-linear-to-r from-white via-amber-100 to-amber-400 bg-clip-text text-transparent filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
               style={{ fontFamily: "'Ramabhadra', sans-serif", fontWeight: 900 }}
             >
               హిమబిందు
             </h3>
             
-            <div className="h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent my-2 max-w-xs mx-auto w-full"></div>
+            <div className="h-0.5 bg-linear-to-r from-transparent via-amber-400 to-transparent my-2 max-w-xs mx-auto w-full"></div>
             
             <p 
-              className="text-2xl sm:text-3xl md:text-4xl font-black tracking-wider select-none bg-gradient-to-r from-amber-200 to-white bg-clip-text text-transparent filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
+              className="text-2xl sm:text-3xl md:text-4xl font-black tracking-wider select-none bg-linear-to-r from-amber-200 to-white bg-clip-text text-transparent filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
               style={{ fontFamily: "'Ramabhadra', sans-serif", fontWeight: 900 }}
             >
               ఐ టెస్టింగ్ & ఆప్టికల్స్
@@ -648,7 +624,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
             </div>
 
             <form onSubmit={handlePatientSearch} className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-grow">
+              <div className="relative grow">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text" 
@@ -813,7 +789,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
           {/* Left Column: Bio Photo */}
           <div className="md:col-span-5 flex justify-center">
-            <div className="w-full max-w-sm aspect-[4/3] sm:aspect-square md:h-[400px] overflow-hidden relative rounded-3xl shadow-xl shadow-slate-200 border-2 border-white bg-slate-100">
+            <div className="w-full max-w-sm aspect-4/3 sm:aspect-square md:h-100 overflow-hidden relative rounded-3xl shadow-xl shadow-slate-200 border-2 border-white bg-slate-100">
               {/* Doctor Bio Photo (div with background image to prevent browser-injected Google Lens/Edit buttons) */}
               <div
                 style={{ backgroundImage: 'url("/doctor_1.jpg")' }}
@@ -876,22 +852,22 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="group relative p-6 bg-white border border-slate-200 rounded-2xl hover:-translate-y-2 hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/5 hover:border-amber-400 hover:bg-amber-50/5 transition-all duration-300 ease-out overflow-hidden cursor-pointer">
-              <div className="absolute top-0 left-0 w-0 h-1 bg-gradient-to-r from-amber-500 to-amber-300 group-hover:w-full transition-all duration-350 ease-out" />
+              <div className="absolute top-0 left-0 w-0 h-1 bg-linear-to-r from-amber-500 to-amber-300 group-hover:w-full transition-all duration-350 ease-out" />
               <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2 group-hover:text-amber-700 transition-colors duration-250">Computerized Eye Testing</h5>
               <p className="text-slate-550 text-xs leading-normal">Advanced computerized eye testing for accurate vision assessment and prescription.</p>
             </div>
             <div className="group relative p-6 bg-white border border-slate-200 rounded-2xl hover:-translate-y-2 hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/5 hover:border-amber-400 hover:bg-amber-50/5 transition-all duration-300 ease-out overflow-hidden cursor-pointer">
-              <div className="absolute top-0 left-0 w-0 h-1 bg-gradient-to-r from-amber-500 to-amber-300 group-hover:w-full transition-all duration-350 ease-out" />
+              <div className="absolute top-0 left-0 w-0 h-1 bg-linear-to-r from-amber-500 to-amber-300 group-hover:w-full transition-all duration-350 ease-out" />
               <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2 group-hover:text-amber-700 transition-colors duration-250">Comprehensive Eye Examination</h5>
               <p className="text-slate-550 text-xs leading-normal">Professional eye examinations to detect vision problems and maintain healthy eyesight.</p>
             </div>
             <div className="group relative p-6 bg-white border border-slate-200 rounded-2xl hover:-translate-y-2 hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/5 hover:border-amber-400 hover:bg-amber-50/5 transition-all duration-300 ease-out overflow-hidden cursor-pointer">
-              <div className="absolute top-0 left-0 w-0 h-1 bg-gradient-to-r from-amber-500 to-amber-300 group-hover:w-full transition-all duration-350 ease-out" />
+              <div className="absolute top-0 left-0 w-0 h-1 bg-linear-to-r from-amber-500 to-amber-300 group-hover:w-full transition-all duration-350 ease-out" />
               <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2 group-hover:text-amber-700 transition-colors duration-250">Spectacles & Frames</h5>
               <p className="text-slate-555 text-xs leading-normal">Premium spectacle frames and high-quality prescription lenses for all age groups.</p>
             </div>
             <div className="group relative p-6 bg-white border border-slate-200 rounded-2xl hover:-translate-y-2 hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/5 hover:border-amber-400 hover:bg-amber-50/5 transition-all duration-300 ease-out overflow-hidden cursor-pointer">
-              <div className="absolute top-0 left-0 w-0 h-1 bg-gradient-to-r from-amber-500 to-amber-300 group-hover:w-full transition-all duration-350 ease-out" />
+              <div className="absolute top-0 left-0 w-0 h-1 bg-linear-to-r from-amber-500 to-amber-300 group-hover:w-full transition-all duration-350 ease-out" />
               <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-2 group-hover:text-amber-700 transition-colors duration-250">Contact Lenses</h5>
               <p className="text-slate-550 text-xs leading-normal">Comfortable and reliable contact lens solutions with expert guidance.</p>
             </div>
@@ -947,7 +923,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
 
           {/* Right Column: Carousel with flash animation */}
           <div className="lg:col-span-6">
-            <div className="relative aspect-[4/3] rounded-3xl overflow-hidden border border-slate-200/80 shadow-2xl bg-slate-950 group">
+            <div className="relative aspect-4/3 rounded-3xl overflow-hidden border border-slate-200/80 shadow-2xl bg-slate-950 group">
               {/* Active Image (div with background image to completely prevent browser-injected Google Lens/Edit buttons) */}
               <div
                 style={{
@@ -986,7 +962,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
               </button>
 
               {/* Carousel Indicators & Captions */}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent p-6 z-10 space-y-2">
+              <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-slate-950 via-slate-900/60 to-transparent p-6 z-10 space-y-2">
                 <span className="px-2 py-0.5 bg-amber-500 text-slate-950 text-[9px] font-black uppercase tracking-wider rounded-full shadow-md">
                   Clinic Showcase
                 </span>
@@ -1026,8 +1002,8 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
       {/* Luxury Frame Styles Showcase */}
       <section id="designer-frames" className="bg-slate-950 text-white py-12 px-4 sm:py-24 sm:px-6 relative overflow-hidden">
         {/* Ambient glow */}
-        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-amber-600/5 rounded-full filter blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-slate-700/20 rounded-full filter blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-0 w-125 h-125 bg-amber-600/5 rounded-full filter blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-100 h-100 bg-slate-700/20 rounded-full filter blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto space-y-14 relative z-10">
           {/* Header */}
@@ -1042,7 +1018,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
               Premium Eyewear Collection
             </span>
-            <h3 className="text-4xl md:text-5xl font-black uppercase font-serif tracking-wider bg-gradient-to-r from-white via-amber-100 to-amber-300 bg-clip-text text-transparent">
+            <h3 className="text-4xl md:text-5xl font-black uppercase font-serif tracking-wider bg-linear-to-r from-white via-amber-100 to-amber-300 bg-clip-text text-transparent">
               Designer Frame Styles
             </h3>
             <p className="text-slate-400 text-sm max-w-2xl mx-auto leading-relaxed">
@@ -1079,11 +1055,11 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
                 className="group relative rounded-3xl overflow-hidden border border-slate-800 hover:border-amber-500/60 transition-all duration-400 shadow-2xl cursor-pointer bg-slate-900"
               >
                 {/* Single image — full bleed tall card */}
-                <div className="relative aspect-[3/4] w-full overflow-hidden bg-white rounded-2xl">
+                <div className="relative aspect-3/4 w-full overflow-hidden bg-white rounded-2xl">
                   {/* Bottom fade overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/10 to-transparent z-10 pointer-events-none" />
+                  <div className="absolute inset-0 bg-linear-to-t from-slate-950 via-slate-900/10 to-transparent z-10 pointer-events-none" />
                   {/* Gold top bar on hover */}
-                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500 to-transparent z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-transparent via-amber-50 to-transparent z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   {/* Frame Styles image (div with background image to prevent browser-injected Google Lens/Edit buttons) */}
                   <div
                     style={{ 
@@ -1095,7 +1071,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
                     }}
                     role="img"
                     aria-label={frame.name}
-                    className="w-full h-full p-3 transform group-hover:scale-110 group-hover:rotate-[-1deg] transition-transform duration-500 pointer-events-none select-none"
+                    className="w-full h-full p-3 transform group-hover:scale-110 group-hover:-rotate-1 transition-transform duration-500 pointer-events-none select-none"
                   />
                   {/* View Collection badge */}
                   <div className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0">
@@ -1114,7 +1090,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
                     {frame.name}
                   </h4>
                   {/* Animated underline */}
-                  <div className="h-[1.5px] bg-gradient-to-r from-amber-500 to-transparent w-0 group-hover:w-full transition-all duration-400 rounded-full" />
+                  <div className="h-0.5 bg-linear-to-r from-amber-500 to-transparent w-0 group-hover:w-full transition-all duration-400 rounded-full" />
                 </div>
               </motion.div>
             ))}
@@ -1242,7 +1218,7 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
           <p>© 2026 Himabindhu Eye Testing & Opticals. All rights reserved.</p>
           <div className="flex flex-wrap items-center justify-center gap-1.5 md:gap-2 text-[11px] text-slate-300 bg-slate-900/50 px-4 py-2 rounded-xl border border-slate-800/80">
             <span>Developed by</span>
-            <span className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-200 uppercase tracking-wider">Shaivika Groups</span>
+            <span className="font-extrabold text-transparent bg-clip-text bg-linear-to-r from-amber-400 to-amber-200 uppercase tracking-wider">Shaivika Groups</span>
             <span className="text-slate-700">•</span>
             <a href="tel:8985541157" className="hover:text-amber-400 transition-colors font-mono font-bold">8985541157</a>
             <span className="text-slate-700">•</span>

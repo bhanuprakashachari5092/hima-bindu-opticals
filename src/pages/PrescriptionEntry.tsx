@@ -824,7 +824,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 
                 {/* 1. RIGHT EYE PANEL (OD) */}
-                <div className="p-4 bg-amber-50/20 border-1 border-amber-200 rounded-2xl relative">
+                <div className="p-4 bg-amber-50/20 border border-amber-200 rounded-2xl relative">
                   <svg className="w-16 h-16 text-amber-500/10 absolute -right-2 -top-2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
                     <circle cx="12" cy="12" r="3" />
@@ -921,7 +921,7 @@ export default function PrescriptionEntry({ prefilledPatient, clearPrefilledPati
                 </div>
 
                 {/* 2. LEFT EYE PANEL (OS) */}
-                <div className="p-4 bg-indigo-50/20 border-1 border-indigo-100 rounded-2xl relative">
+                <div className="p-4 bg-indigo-50/20 border border-indigo-100 rounded-2xl relative">
                   <svg className="w-16 h-16 text-indigo-500/10 absolute -right-2 -top-2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
                     <circle cx="12" cy="12" r="3" />
