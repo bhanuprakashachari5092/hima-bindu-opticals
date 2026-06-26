@@ -491,9 +491,9 @@ export default function Home({ onNavigateToLogin, onSelectFrameType }: HomeProps
           muted
           playsInline
           className="absolute inset-0 w-full h-full object-cover z-0 filter brightness-[0.45]"
-          poster="/eyesight-testing-video-thumbnail.jpg"
+          poster="/eye_testing_bg.png"
         >
-          <source src="/eyesight-testing-clinic-video.mp4" type="video/mp4" />
+          <source src="/eye_testing_video.mp4" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
 
